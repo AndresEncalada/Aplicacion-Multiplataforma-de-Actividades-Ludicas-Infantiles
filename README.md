@@ -65,9 +65,8 @@ uv run python main.py   # inicia el servidor en http://127.0.0.1:8000
 | [`docs/instalacion.md`](docs/instalacion.md) | Guía de instalación detallada, variables de entorno, resolución de problemas |
 | [`docs/arquitectura.md`](docs/arquitectura.md) | Diseño del sistema, endpoints WebSocket/HTTP, flujo de datos |
 | [`docs/modelos.md`](docs/modelos.md) | Tabla de modelos, descarga, pipeline de re-entrenamiento |
-| [`docs/frontend.md`](docs/frontend.md) | Escenas Godot, configuración de red, assets |
 | [`backend/README.md`](backend/README.md) | Referencia técnica del servidor |
-| [`frontend/README.md`](frontend/README.md) | Referencia técnica del frontend |
+| [`frontend/README.md`](frontend/README.md) | Escenas Godot, configuración de red, assets, créditos |
 
 ---
 
