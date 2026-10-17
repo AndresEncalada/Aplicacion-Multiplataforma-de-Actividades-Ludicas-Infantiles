@@ -1,0 +1,115 @@
+[gd_scene format=3 uid="uid://byxu0urvdwv7l"]
+
+[ext_resource type="Script" uid="uid://dxvlp4yb7r4xh" path="res://main.gd" id="1_ig7tw"]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_superior"]
+bg_color = Color(0.82, 0.90, 1.0, 0.78)
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+border_color = Color(0.90, 0.78, 0.30, 0.55)
+corner_radius_top_left = 28
+corner_radius_top_right = 28
+corner_radius_bottom_right = 28
+corner_radius_bottom_left = 28
+shadow_color = Color(0.05, 0.10, 0.25, 0.40)
+shadow_size = 18
+anti_aliasing_size = 6.0
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_inferior"]
+bg_color = Color(0.04, 0.08, 0.18, 0.94)
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+border_color = Color(0.90, 0.78, 0.30, 0.40)
+corner_radius_top_left = 28
+corner_radius_top_right = 28
+corner_radius_bottom_right = 28
+corner_radius_bottom_left = 28
+shadow_color = Color(0, 0, 0, 0.55)
+shadow_size = 24
+
+[node name="main" type="Control" unique_id=1796961168]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("1_ig7tw")
+
+[node name="Fondo" type="ColorRect" parent="." unique_id=373090803]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(0.10, 0.20, 0.42, 1)
+
+[node name="ContenedorPrincipal" type="MarginContainer" parent="." unique_id=301451806]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/margin_left = 24
+theme_override_constants/margin_top = 24
+theme_override_constants/margin_right = 24
+theme_override_constants/margin_bottom = 24
+
+[node name="ContenidoVBox" type="VBoxContainer" parent="ContenedorPrincipal" unique_id=621060999]
+layout_mode = 2
+theme_override_constants/separation = 12
+
+[node name="TarjetaSuperior" type="PanelContainer" parent="ContenedorPrincipal/ContenidoVBox" unique_id=1467150349]
+custom_minimum_size = Vector2(0, 200)
+layout_mode = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_superior")
+
+[node name="ContenidoSuperior" type="VBoxContainer" parent="ContenedorPrincipal/ContenidoVBox/TarjetaSuperior" unique_id=699468035]
+layout_mode = 2
+theme_override_constants/separation = 4
+
+[node name="TituloLabel" type="Label" parent="ContenedorPrincipal/ContenidoVBox/TarjetaSuperior/ContenidoSuperior" unique_id=1305057940]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.55, 0.45, 0.12, 1)
+theme_override_font_sizes/font_size = 22
+text = "Reconocimiento del cuerpo"
+horizontal_alignment = 1
+
+[node name="InstruccionLabel" type="Label" parent="ContenedorPrincipal/ContenidoVBox/TarjetaSuperior/ContenidoSuperior" unique_id=653571811]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.08, 0.14, 0.32, 1)
+theme_override_font_sizes/font_size = 52
+text = "Parate frente a la cámara"
+horizontal_alignment = 1
+
+[node name="InfoContainer" type="HBoxContainer" parent="ContenedorPrincipal/ContenidoVBox/TarjetaSuperior/ContenidoSuperior" unique_id=198137112]
+layout_mode = 2
+theme_override_constants/separation = 60
+alignment = 1
+
+[node name="ProgresoLabel" type="Label" parent="ContenedorPrincipal/ContenidoVBox/TarjetaSuperior/ContenidoSuperior/InfoContainer" unique_id=720386736]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.15, 0.65, 0.35, 1)
+theme_override_font_sizes/font_size = 34
+horizontal_alignment = 1
+
+[node name="TiempoLabel" type="Label" parent="ContenedorPrincipal/ContenidoVBox/TarjetaSuperior/ContenidoSuperior/InfoContainer" unique_id=664301785]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.75, 0.62, 0.15, 1)
+theme_override_font_sizes/font_size = 40
+
+[node name="TarjetaInferior" type="PanelContainer" parent="ContenedorPrincipal/ContenidoVBox" unique_id=2104762890]
+layout_mode = 2
+size_flags_vertical = 3
+theme_override_styles/panel = SubResource("StyleBoxFlat_inferior")
+
+[node name="VideoTexture" type="TextureRect" parent="ContenedorPrincipal/ContenidoVBox/TarjetaInferior" unique_id=761776539]
+layout_mode = 2
+expand_mode = 1
+stretch_mode = 5

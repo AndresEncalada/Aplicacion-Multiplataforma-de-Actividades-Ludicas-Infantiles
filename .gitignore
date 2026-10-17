@@ -1,0 +1,70 @@
+# =============================================================
+# BACKEND (Python / FastAPI)
+# =============================================================
+
+# Entornos virtuales
+backend/.venv/
+backend/venv/
+backend/env/
+
+# Modelos grandes — descargar con: uv run python scripts/instalar_modelos.py
+backend/modelos_whisper/
+backend/modelos_llm/
+*.gguf
+*.bin
+
+# Artefactos de entrenamiento (regenerar con scripts/)
+backend/dataset_pictogramas/
+backend/runs/
+backend/scripts/yolo26n-cls.pt
+
+# Cache Python
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Archivos temporales
+*.zip
+*.wav
+debug_*.jpg
+
+# =============================================================
+# FRONTEND (Godot 4)
+# =============================================================
+
+# Cache del editor (regenerado automáticamente)
+frontend/felpudo/.godot/
+
+# Archivos temporales del editor (autosave de crash)
+frontend/felpudo/*.tmp
+
+# Exportación Android
+frontend/felpudo/android/
+
+# =============================================================
+# CLAUDE 
+# =============================================================
+
+CLAUDE.md
+.claudeignore
+.claude/
+
+# =============================================================
+# GENERAL
+# =============================================================
+
+# Sistemas operativos
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# IDEs
+.vscode/
+.idea/
+*.iml
+*.swp
+*.swo

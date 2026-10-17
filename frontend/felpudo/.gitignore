@@ -1,0 +1,8 @@
+# Godot editor cache (auto-generated)
+.godot/
+
+# Editor temp/autosave files
+*.tmp
+
+# Android export (if applicable)
+/android/

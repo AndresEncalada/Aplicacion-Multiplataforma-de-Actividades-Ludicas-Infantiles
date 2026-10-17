@@ -1,0 +1,20 @@
+[project]
+name = "backend"
+version = "0.1.0"
+description = "Backend para el sistema interactivo con IA y visión por computadora"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "fastapi>=0.110.0",
+    "numpy>=1.26.0",
+    "opencv-python>=4.9.0",
+    "ultralytics>=8.1.0",
+    "uvicorn[standard]>=0.27.0",
+    "websockets>=12.0",
+    "onnx>=1.12.0",
+    "onnxruntime>=1.15.0",
+    "onnxslim>=0.1.82",
+    "sounddevice>=0.4.6",
+    "pywhispercpp>=1.5.0",
+    "llama-cpp-python>=0.2.50",
+]
