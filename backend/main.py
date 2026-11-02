@@ -1,5 +1,8 @@
 from contextlib import asynccontextmanager
-from fastapi import FastAPI, WebSocket, WebSocketDisconnect
+from typing import Any, Dict, Optional
+from fastapi import Depends, FastAPI, HTTPException, WebSocket, WebSocketDisconnect, status
+from fastapi.responses import HTMLResponse
+from pydantic import BaseModel
 import cv2
 import asyncio
 import time
@@ -20,6 +23,24 @@ from actividad_cuerpo.procesamiento import ImageProcessor
 from actividad_cuerpo.game_manager import GameManager
 from actividad_pictogramas.recognizer import PictogramRecognizer
 from actividad_pictogramas.conocimiento import obtener_contexto, obtener_respuesta_directa
+
+# Módulos de Integración (Seguridad JWT, Arduino, Django y Estadísticas/Reportes)
+from integracion.seguridad import crear_jwt_token, obtener_profesor_actual
+from integracion.arduino_client import arduino_client
+from integracion.django_client import gestor_datos
+from integracion.mapeo_pedagogico import (
+    ARDUINO_CMD_EXITO,
+    ARDUINO_CMD_FALLO,
+    calcular_indicador_corporal,
+    calcular_indicador_pictograma,
+    obtener_info_actividad_cuerpo,
+    obtener_info_pictograma,
+)
+from integracion.reportes import (
+    calcular_estadisticas_alumno,
+    calcular_estadisticas_sesion,
+    generar_reporte_html_alumno,
+)
 
 # Instancia global
 cam_manager = CameraManager()
@@ -116,6 +137,7 @@ async def websocket_cuerpo(websocket: WebSocket):
                 actividad = activity_manager.evaluar_actividad_simple(keypoints)
                 if actividad in ["mano_derecha_levantada", "mano_izquierda_levantada"]:
                     mensaje_enviar = game_manager.seleccionar_jugador()
+                    await arduino_client.enviar_comando("A3", "Inicio Actividad Corporal")
                 else:
                     mensaje_enviar = {"evento": "esperando_mano", "mensaje": "Levanta la mano para comenzar!"}
             elif game_manager.estado == "seleccionado":
@@ -132,8 +154,71 @@ async def websocket_cuerpo(websocket: WebSocket):
                 if coincide:
                     mensaje_enviar = respuesta
                     mensaje_enviar["efecto_visual"] = "flash_exito"
+
+                    # Enviar comando de éxito al Arduino y registrar estadística de acierto
+                    id_act = mensaje_enviar.get("id_actividad", "")
+                    tiempo_resp = float(mensaje_enviar.get("tiempo_respuesta", 5.0))
+                    info_map = obtener_info_actividad_cuerpo(id_act)
+                    ind_ped = calcular_indicador_corporal(True, tiempo_resp)
+
+                    await arduino_client.enviar_comando(ARDUINO_CMD_EXITO, f"Acierto: {info_map['instruccion']}")
+                    gestor_datos.registrar_evento_actividad(
+                        tipo="cuerpo",
+                        codigo_bd=info_map["codigo_bd"],
+                        area_ref=info_map["area_ref"],
+                        area_nombre=info_map["area_nombre"],
+                        actividad_nombre=info_map["actividad_nombre"],
+                        instruccion=info_map["instruccion"],
+                        exito=True,
+                        tiempo_seg=tiempo_resp,
+                        indicador=ind_ped,
+                        intentos=1,
+                        orden_id=info_map["orden_id"],
+                    )
+                    if gestor_datos.sesion_activa_id:
+                        await gestor_datos.sincronizar_django_async(
+                            "/servicios/addCalificacion_Orden/",
+                            {
+                                "orden": info_map["orden_id"],
+                                "sesion": gestor_datos.sesion_activa_id,
+                                "indicador": ind_ped,
+                            },
+                        )
                 else:
                     mensaje_enviar = game_manager.obtener_instruccion_actual()
+
+                    # Si acaba de asignarse una nueva instrucción, enviar estímulo al Arduino
+                    if mensaje_enviar.get("evento") == "instruccion_actividad" and mensaje_enviar.get("nueva_instruccion"):
+                        info_map = obtener_info_actividad_cuerpo(mensaje_enviar.get("id_actividad", ""))
+                        await arduino_client.enviar_comando(info_map["arduino_cmd"], info_map["instruccion"])
+
+                    # Si se agotó el tiempo por primera vez en esta actividad, registrar fallo y notificar Arduino
+                    elif mensaje_enviar.get("evento") == "tiempo_agotado" and mensaje_enviar.get("nuevo_fallo"):
+                        info_map = obtener_info_actividad_cuerpo(mensaje_enviar.get("id_actividad", ""))
+                        tiempo_lim = float(mensaje_enviar.get("tiempo_respuesta", 15.0))
+                        await arduino_client.enviar_comando(ARDUINO_CMD_FALLO, f"Tiempo agotado: {info_map['instruccion']}")
+                        gestor_datos.registrar_evento_actividad(
+                            tipo="cuerpo",
+                            codigo_bd=info_map["codigo_bd"],
+                            area_ref=info_map["area_ref"],
+                            area_nombre=info_map["area_nombre"],
+                            actividad_nombre=info_map["actividad_nombre"],
+                            instruccion=info_map["instruccion"],
+                            exito=False,
+                            tiempo_seg=tiempo_lim,
+                            indicador="iniciado",
+                            intentos=1,
+                            orden_id=info_map["orden_id"],
+                        )
+                        if gestor_datos.sesion_activa_id:
+                            await gestor_datos.sincronizar_django_async(
+                                "/servicios/addCalificacion_Orden/",
+                                {
+                                    "orden": info_map["orden_id"],
+                                    "sesion": gestor_datos.sesion_activa_id,
+                                    "indicador": "iniciado",
+                                },
+                            )
             elif game_manager.estado == "terminado":
                 mensaje_enviar = {"evento": "juego_completado", "mensaje": "Felicidades, completaste todas las actividades"}
                 frame_procesado = image_processor.crear_confeti_exito(frame_procesado)
@@ -187,6 +272,7 @@ async def websocket_pictogramas(websocket: WebSocket):
                 continue
             intentos = 0
             max_intentos = 2
+            await arduino_client.enviar_comando("A1", "Escaneo de Pictograma")
 
             # FASE 1: DETECCIÓN DEL PICTOGRAMA
             while intentos < max_intentos:
@@ -221,8 +307,22 @@ async def websocket_pictogramas(websocket: WebSocket):
                         return
                     await asyncio.sleep(0.033)
                 
+                tiempo_escaneo = round(time.time() - scan_start, 2)
                 if best_score < 0.7:
                     try:
+                        await arduino_client.enviar_comando(ARDUINO_CMD_FALLO, "Pictograma no detectado")
+                        gestor_datos.registrar_evento_actividad(
+                            tipo="pictogramas",
+                            codigo_bd="pic_no_detectado",
+                            area_ref="area1_6",
+                            area_nombre="Socialización y Comprensión Verbal (Pictogramas)",
+                            actividad_nombre="Pictogramas/NoDetectado",
+                            instruccion="Escaneo de pictograma sin detección clara",
+                            exito=False,
+                            tiempo_seg=tiempo_escaneo,
+                            indicador="iniciado",
+                            intentos=intentos + 1,
+                        )
                         await websocket.send_json({"evento": "fallo_deteccion", "tipo": "no_detectado"})
                         await asyncio.sleep(2.0)
                     except Exception: pass
@@ -238,7 +338,11 @@ async def websocket_pictogramas(websocket: WebSocket):
                     data_resp = await websocket.receive_json()
                     if data_resp.get("accion") == "confirmar":
                         pictograma_confirmado = best_name or "desconocido"
-                        
+                        info_pic = obtener_info_pictograma(pictograma_confirmado)
+                        ind_pic = calcular_indicador_pictograma(True, intentos + 1)
+                        await arduino_client.enviar_comando(ARDUINO_CMD_EXITO, f"Pictograma confirmado: {pictograma_confirmado}")
+
+                        preguntas_realizadas = 0
                         # FASE 2: MODO DE PREGUNTAS ILIMITADAS
                         while running:
                             msg = await websocket.receive_json()
@@ -266,11 +370,36 @@ async def websocket_pictogramas(websocket: WebSocket):
                                     except: break
                                 
                                 if audio_chunks:
+                                    preguntas_realizadas += 1
                                     audio_data = np.concatenate(audio_chunks, axis=0)
                                     await _procesar_audio(websocket, audio_data, pictograma_confirmado)
                             
                             elif cmd == "volver":
                                 break
+
+                        # Registrar el logro del pictograma y las preguntas realizadas en las estadísticas
+                        gestor_datos.registrar_evento_actividad(
+                            tipo="pictogramas",
+                            codigo_bd=info_pic["codigo_bd"],
+                            area_ref=info_pic["area_ref"],
+                            area_nombre=info_pic["area_nombre"],
+                            actividad_nombre=info_pic["actividad_nombre"],
+                            instruccion=f"Pictograma: {pictograma_confirmado} ({preguntas_realizadas} preguntas)",
+                            exito=True,
+                            tiempo_seg=tiempo_escaneo,
+                            indicador=ind_pic,
+                            intentos=intentos + 1,
+                            actividad_juego_id=info_pic["actividad_juego_id"],
+                        )
+                        if gestor_datos.sesion_activa_id:
+                            await gestor_datos.sincronizar_django_async(
+                                "/servicios/addCalificacion_Juego/",
+                                {
+                                    "actividad_juego": info_pic["actividad_juego_id"],
+                                    "sesion": gestor_datos.sesion_activa_id,
+                                    "indicador": ind_pic,
+                                },
+                            )
                         
                         break  # Salir del bucle de intentos
                         
@@ -282,6 +411,19 @@ async def websocket_pictogramas(websocket: WebSocket):
             
             if intentos >= max_intentos:
                 try:
+                    await arduino_client.enviar_comando(ARDUINO_CMD_FALLO, "Pictograma rechazado 2 veces")
+                    gestor_datos.registrar_evento_actividad(
+                        tipo="pictogramas",
+                        codigo_bd="pic_rechazado",
+                        area_ref="area1_6",
+                        area_nombre="Socialización y Comprensión Verbal (Pictogramas)",
+                        actividad_nombre="Pictogramas/Rechazado",
+                        instruccion="Escaneo rechazado en 2 intentos",
+                        exito=False,
+                        tiempo_seg=10.0,
+                        indicador="iniciado",
+                        intentos=max_intentos,
+                    )
                     await websocket.send_json({"evento": "fallo_deteccion", "tipo": "rechazado_2_veces"})
                     await asyncio.sleep(2.0)
                 except Exception: pass
@@ -331,8 +473,8 @@ async def _procesar_audio(websocket: WebSocket, audio_data: np.ndarray, pictogra
             # 2. Si no hay respuesta directa, usar el LLM con un prompt ULTRA SIMPLE
             contexto_real = obtener_contexto(pictograma)
             
-            # PROMPT SIMPLIFICADO: Sin listas de reglas negativas que confunden al modelo pequeño
-            prompt = f"""Eres un amigo que habla con niños de 5 años.
+            # PROMPT SIMPLIFICADO: Adaptado a niños de 3 a 5 años
+            prompt = f"""Eres un amigo que habla con niños de 3 a 5 años.
 Tema: {pictograma.upper()}
 Dato real: {contexto_real}
 Pregunta del niño: "{texto_usuario}"
@@ -398,6 +540,182 @@ async def liberar_camara():
     cam_manager.liberar_todo()
     game_manager.reiniciar()
     return {"mensaje": "ok"}
+
+# ==========================================
+# ENDPOINTS 5+: Seguridad OAuth2/JWT, Alumnos, Sesiones, Estadísticas y Reportes
+# ==========================================
+
+class LoginRequest(BaseModel):
+    username: str
+    password: str
+
+class IniciarSesionRequest(BaseModel):
+    nn_id: int
+    categoria_id: int = 1
+
+class FinalizarSesionRequest(BaseModel):
+    sesion_id: Optional[int] = None
+
+
+def _enriquecer_alumnos_con_estadisticas(alumnos: list) -> list:
+    resultado = []
+    for a in alumnos:
+        stats = calcular_estadisticas_alumno(int(a["id"]))
+        resumen = stats["resumen"] if stats else {
+            "total_sesiones": 0,
+            "total_intentos": 0,
+            "total_aciertos": 0,
+            "total_fallos": 0,
+            "tasa_exito_pct": 0.0,
+            "mejora_pct": 0.0,
+            "estado_evolucion": "Sin sesiones",
+            "detalle_evolucion": "",
+        }
+        item = dict(a)
+        item["estadisticas"] = resumen
+        resultado.append(item)
+    return resultado
+
+
+@app.get("/api/estado")
+async def estado_sistema():
+    """Diagnóstico del sistema para alertas amigables en Godot."""
+    return {
+        "servidor": "ok",
+        "modelos": {
+            "pose_yolo": detector is not None,
+            "pictogramas_onnx": pictogram_recognizer is not None,
+            "whisper_voz": whisper_model is not None,
+            "llm_qwen": llm_model is not None,
+        },
+        "arduino": arduino_client.estado(),
+        "django_raspberry_pi": {
+            "sincronizado_en_red": gestor_datos.django_online,
+            "modo_respaldo_local": True,
+        },
+        "sesion_activa_id": gestor_datos.sesion_activa_id,
+        "alumno_activo_id": gestor_datos.alumno_activo_id,
+    }
+
+
+@app.post("/api/auth/login")
+async def login_profesor(datos: LoginRequest):
+    """
+    Autenticación exclusiva del profesor mediante usuario y contraseña (PBKDF2-SHA256).
+    Emite un token JWT firmado con HS256 y devuelve los alumnos asignados al profesor.
+    """
+    profesor = gestor_datos.autenticar_profesor(datos.username, datos.password)
+    if not profesor:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Usuario o contraseña incorrectos. Por favor verifique sus datos o contacte al administrador.",
+        )
+
+    token = crear_jwt_token(profesor)
+    alumnos = gestor_datos.listar_alumnos_por_profesor(int(profesor["id"]))
+    alumnos_con_stats = _enriquecer_alumnos_con_estadisticas(alumnos)
+
+    # Sincronización no bloqueante con Django en la Raspberry Pi
+    await gestor_datos.sincronizar_django_async(
+        "/servicios/api-token-auth/",
+        {"username": datos.username, "password": datos.password},
+    )
+
+    return {
+        "access_token": token,
+        "token_type": "bearer",
+        "profesor": profesor,
+        "alumnos": alumnos_con_stats,
+    }
+
+
+@app.get("/api/alumnos")
+async def obtener_alumnos_profesor(profesor_actual: Dict[str, Any] = Depends(obtener_profesor_actual)):
+    """
+    Devuelve únicamente los alumnos asignados al profesor autenticado (nivel único 'Inicial')
+    junto con sus estadísticas acumuladas de intentos, aciertos, fallos y mejora.
+    """
+    prof_id = int(profesor_actual["profesor_id"])
+    alumnos = gestor_datos.listar_alumnos_por_profesor(prof_id)
+    return {
+        "profesor": profesor_actual,
+        "alumnos": _enriquecer_alumnos_con_estadisticas(alumnos),
+    }
+
+
+@app.post("/api/sesion/iniciar")
+async def api_iniciar_sesion(
+    req: IniciarSesionRequest,
+    profesor_actual: Dict[str, Any] = Depends(obtener_profesor_actual),
+):
+    """Inicia una sesión pedagógica para el alumno seleccionado."""
+    alumno = gestor_datos.obtener_alumno(req.nn_id)
+    if not alumno:
+        raise HTTPException(status_code=404, detail="Estudiante no encontrado.")
+
+    prof_id = int(profesor_actual["profesor_id"])
+    sesion = gestor_datos.iniciar_sesion(nn_id=req.nn_id, profesor_id=prof_id, categoria_id=req.categoria_id)
+    game_manager.reiniciar()
+
+    await gestor_datos.sincronizar_django_async(
+        "/servicios/addSesion/",
+        {"nn": req.nn_id, "categoria": req.categoria_id},
+    )
+
+    return {
+        "mensaje": "Sesión iniciada correctamente",
+        "sesion": sesion,
+        "alumno": alumno,
+    }
+
+
+@app.post("/api/sesion/finalizar")
+async def api_finalizar_sesion(
+    req: FinalizarSesionRequest,
+    profesor_actual: Dict[str, Any] = Depends(obtener_profesor_actual),
+):
+    """Finaliza la sesión activa y devuelve las estadísticas de la sesión y la evolución del alumno."""
+    sesion_cerrada = gestor_datos.finalizar_sesion(req.sesion_id)
+    if not sesion_cerrada:
+        return {"mensaje": "No había sesión activa para cerrar", "sesion": None}
+
+    await gestor_datos.sincronizar_django_async(
+        f"/servicios/updateSesion/{sesion_cerrada['id']}/",
+        {"area_visitada": sesion_cerrada.get("area_visitada", "General")},
+    )
+
+    stats_sesion = calcular_estadisticas_sesion(sesion_cerrada)
+    stats_alumno = calcular_estadisticas_alumno(int(sesion_cerrada["nn"]))
+
+    return {
+        "mensaje": "Sesión finalizada correctamente",
+        "estadisticas_sesion": stats_sesion,
+        "estadisticas_alumno": stats_alumno,
+    }
+
+
+@app.get("/api/estadisticas/alumno/{nn_id}")
+async def api_estadisticas_alumno(
+    nn_id: int,
+    profesor_actual: Dict[str, Any] = Depends(obtener_profesor_actual),
+):
+    """Obtiene el historial completo de intentos, aciertos, fallos y mejora de un alumno."""
+    stats = calcular_estadisticas_alumno(nn_id)
+    if not stats:
+        raise HTTPException(status_code=404, detail="Estudiante no encontrado.")
+    return stats
+
+
+@app.get("/api/reportes/alumno/{nn_id}/html", response_class=HTMLResponse)
+async def api_reporte_alumno_html(nn_id: int, sesion_id: Optional[int] = None):
+    """
+    Genera y devuelve el reporte oficial individual en HTML listo para imprimir o guardar en PDF.
+    """
+    html_content = generar_reporte_html_alumno(nn_id=nn_id, sesion_id=sesion_id)
+    if not html_content:
+        raise HTTPException(status_code=404, detail="Estudiante no encontrado.")
+    return HTMLResponse(content=html_content, status_code=200)
+
 
 if __name__ == "__main__":
     import uvicorn

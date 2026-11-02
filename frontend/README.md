@@ -45,11 +45,13 @@ const HTTP_LIBERAR_CAMARA := "http://" + SERVER_HOST + "/liberar_camara"
 
 ```
 frontend/felpudo/
-├── project.godot                     # Configuración del proyecto
-├── config.gd                         # Autoload: constantes de red (SERVER_HOST)
+├── project.godot                     # Configuración del proyecto (inicia en login_profesor.tscn)
+├── config.gd                         # Autoload: constantes de red (WebSockets + API REST JWT)
 ├── anim_manager.gd                   # Autoload: toggle de animaciones global
+├── sesion_state.gd                   # Autoload: estado del profesor (JWT), alumnos y sesión activa
 │
-├── menu_principal.tscn / .gd         # Pantalla de inicio con bear mascota
+├── login_profesor.tscn / .gd         # Login docente, lista de sus alumnos y panel de estadísticas/reportes
+├── menu_principal.tscn / .gd         # Pantalla de inicio del alumno activo con bear mascota
 ├── menu_actividades.tscn / .gd       # Selección de actividad
 ├── actividad_cuerpo.tscn / .gd       # Actividad de reconocimiento corporal
 ├── actividad_pictogramas.tscn / .gd  # Actividad de pictogramas + Q&A
@@ -69,13 +71,39 @@ frontend/felpudo/
 |-----------|---------|-------------|
 | `Config` | `config.gd` | Constantes de red; primera en cargarse |
 | `AnimManager` | `anim_manager.gd` | Signal `changed(activo)` que activa/desactiva tweens en toda la app |
+| `SesionState` | `sesion_state.gd` | Conserva el token JWT del profesor, su lista de alumnos y la sesión activa |
+
+---
+
+## Guía de Imágenes y Assets (Dónde ponerlas y qué tipo sacar)
+
+Todas las imágenes de interfaz van en la carpeta:
+`frontend/felpudo/assets/iconos/`
+
+El sistema ya funciona de inmediato usando los iconos actuales como respaldo automático, pero puedes colocar estas imágenes opcionales para personalizar aún más las nuevas vistas docentes:
+
+| Nombre de archivo a colocar | Ruta completa en Godot | Qué tipo de imagen sacar / usar | Tamaño y Formato recomendado | Icono de respaldo actual |
+| :--- | :--- | :--- | :--- | :--- |
+| **`profesor.png`** | `res://assets/iconos/profesor.png` | Icono amigable de docente / profesora o birrete escolar estilo flat/cartoon. | PNG transparente, `128×128 px` o `256×256 px` | `bear.png` |
+| **`alumno.png`** | `res://assets/iconos/alumno.png` | Avatar infantil (carita sonriente de niño/niña de 3 a 5 años) estilo colorido y redondeado. | PNG transparente, `128×128 px` | `cuerpo.png` |
+| **`reporte.png`** | `res://assets/iconos/reporte.png` | Icono de hoja de calificación con estrella o gráfico de barras de progreso. | PNG o SVG transparente, `128×128 px` | `preguntas.png` |
+| **`alerta.png`** | `res://assets/iconos/alerta.png` | Icono amigable de enchufe/red o aviso suave para los mensajes de verificación de conexión. | PNG o SVG transparente, `128×128 px` | `bear.png` |
+
+> **¿De dónde sacarlas manteniendo el estilo visual?**
+> 1. **[Kenney.nl](https://kenney.nl/assets)** *(Board Game Icons / Game Icons / UI Pack)* — Dominio público (CC0), mismo estilo exacto de bordes gruesos que el resto de la app.
+> 2. **[ARASAAC](https://arasaac.org/pictograms/search)** — Busca *"maestro"*, *"niño"*, *"evaluación"* o *"conexión"* y descárgalos en PNG con fondo transparente (300×300 px).
 
 ---
 
 ## Escenas
 
+### `login_profesor` (Escena inicial)
+- **Vista 1 (Login):** Acceso exclusivo para el profesor con usuario y contraseña (`POST /api/auth/login` con OAuth2/JWT).
+- **Vista 2 (Mis Alumnos):** Muestra únicamente los alumnos asignados al profesor autenticado (3 a 5 años, nivel único `Inicial`) con su resumen de intentos, aciertos, fallos y porcentaje de mejora.
+- **Vista 3 (Estadísticas y Reporte):** Desglose por sesión y actividad con indicadores (`adquirido`, `proceso`, `iniciado`) y botón para abrir el **Reporte Imprimible (PDF / HTML)** en el navegador.
+
 ### `menu_principal`
-UI procedural. Bear mascota con animación wobble. Un botón de acceso a actividades y un toggle para habilitar/deshabilitar animaciones (persiste en `AnimManager`).
+UI procedural. Bear mascota con animación wobble. Muestra en la esquina superior derecha el nombre del alumno activo y el botón para finalizar la sesión y regresar al panel del profesor.
 
 ### `menu_actividades`
 Dos tarjetas: **Reconocimiento del Cuerpo** y **Preguntas** (pictogramas). Botón X de vuelta al menú principal.
@@ -85,7 +113,8 @@ Dos tarjetas: **Reconocimiento del Cuerpo** y **Preguntas** (pictogramas). Botó
 - Muestra feed de cámara en pantalla completa con overlay de barra de instrucción inferior
 - Diálogo de bienvenida overlay con botón "¡Comenzar!"
 - Animación de flash blanco + check verde al completar una actividad (`centro_cuerpo` del backend determina la posición exacta)
-- Botón X: cierra WebSocket + llama `POST /reiniciar` + navega al menú
+- Registra automáticamente aciertos, tiempos y fallos en la sesión activa y envía comandos al Arduino (`MD4`, `MI5`, `CA3`, `OD2`, `BR1`, `CC`, `NA`)
+- Muestra alerta amigable si se pierde la conexión con el servidor
 
 ### `actividad_pictogramas`
 - Se conecta al WebSocket `/ws_pictogramas`

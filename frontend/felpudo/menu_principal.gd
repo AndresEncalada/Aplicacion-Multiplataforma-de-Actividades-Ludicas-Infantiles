@@ -8,14 +8,18 @@ const NAVY      := Color(0.08, 0.18, 0.38)
 
 const FONT_KFN      := "res://assets/fuente/Kenney Future Narrow.ttf"
 const SND_CLICK     := "res://assets/sonidos/click.ogg"
+const SND_CERRAR    := "res://assets/sonidos/cerrar.ogg"
 const ICO_CHECK     := "res://assets/iconos/check.svg"
 const ICO_PANEL     := "res://assets/iconos/panel.svg"
 const ICO_BANNER    := "res://assets/iconos/banner.svg"
 const ICO_BEAR      := "res://assets/iconos/bear.png"
 const ICO_BOTON     := "res://assets/iconos/boton.svg"
+const ICO_X         := "res://assets/iconos/x.svg"
 const ICO_CHK_VERDE := "res://assets/iconos/check_verde.svg"
 const ICO_CHK_MEDIO := "res://assets/iconos/check_medio.svg"
 const ICO_CHK_GRIS  := "res://assets/iconos/check_gris.svg"
+const ICO_REPORTE_OPT := "res://assets/iconos/reporte.png"
+const ICO_PREGUNTAS   := "res://assets/iconos/preguntas.png"
 
 const BANNER_H : int = 135
 const OVERLAP  : int = 67  # 50 % de BANNER_H
@@ -23,6 +27,7 @@ const OVERLAP  : int = 67  # 50 % de BANNER_H
 var _font: FontFile
 var _btn_bloqueado := false
 var _sfx_click: AudioStreamPlayer
+var _sfx_cerrar: AudioStreamPlayer
 var _wobble_index: int = 0
 # {"node": Control, "tween": Tween, "type": "wobble"|"jiggle", "phase": float, "speed": float, "angle": float}
 var _wobble_data: Array = []
@@ -36,12 +41,20 @@ func _ready():
 		_sfx_click.stream    = snd
 		_sfx_click.volume_db = -6.0
 	add_child(_sfx_click)
+
+	_sfx_cerrar = AudioStreamPlayer.new()
+	var snd_c = load(SND_CERRAR)
+	if snd_c:
+		_sfx_cerrar.stream    = snd_c
+		_sfx_cerrar.volume_db = -6.0
+	add_child(_sfx_cerrar)
+
 	_construir_ui()
 	if has_node("/root/AnimManager"):
 		AnimManager.changed.connect(_on_anim_changed)
 
 # ---------------------------------------------------------------------------
-# Interfaz principal
+# Interfaz principal (mismas proporciones originales)
 # ---------------------------------------------------------------------------
 
 func _construir_ui():
@@ -61,8 +74,9 @@ func _construir_ui():
 	root_vbox.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	add_child(root_vbox)
 
-	# Toggle añadido AL FINAL para que reciba input antes que root_vbox (FULL_RECT)
+	# Controles en esquinas superiores (no interfieren con el banner central)
 	add_child(_crear_toggle_animaciones())
+	add_child(_crear_boton_cerrar_sesion())
 
 	# Stack: separación negativa → panel sube OVERLAP px bajo el banner
 	var stack = VBoxContainer.new()
@@ -73,6 +87,42 @@ func _construir_ui():
 
 	stack.add_child(_crear_header_con_oso("Felpudo", vp_w))
 	stack.add_child(_crear_panel_con_tarjetas(mg, vp_h))
+
+# ---------------------------------------------------------------------------
+# Botón X superior derecho (cierra sesión docente y vuelve al login)
+# ---------------------------------------------------------------------------
+
+func _crear_boton_cerrar_sesion() -> Control:
+	var btn_x = Button.new()
+	btn_x.custom_minimum_size = Vector2(63, 63)
+	btn_x.set_anchors_preset(Control.PRESET_TOP_RIGHT)
+	btn_x.offset_left   = -77
+	btn_x.offset_top    = 12
+	btn_x.offset_right  = -14
+	btn_x.offset_bottom = 75
+	btn_x.z_index = 10
+
+	var empty = StyleBoxEmpty.new()
+	for state in ["normal", "hover", "pressed", "focus", "disabled"]:
+		btn_x.add_theme_stylebox_override(state, empty)
+
+	var ir = TextureRect.new()
+	ir.texture = load(ICO_X) as Texture2D
+	ir.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	ir.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	ir.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	ir.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	btn_x.add_child(ir)
+
+	btn_x.pressed.connect(func():
+		if _btn_bloqueado: return
+		_btn_bloqueado = true
+		if _sfx_cerrar: _sfx_cerrar.play()
+		if has_node("/root/SesionState"):
+			SesionState.cerrar_sesion_profesor()
+		get_tree().change_scene_to_file("res://login_profesor.tscn")
+	)
+	return btn_x
 
 # ---------------------------------------------------------------------------
 # Toggle de animaciones (superior izquierdo)
@@ -94,7 +144,6 @@ func _crear_toggle_animaciones() -> Control:
 	_check_anim_btn.ignore_texture_size  = true
 	_check_anim_btn.stretch_mode         = TextureButton.STRETCH_KEEP_ASPECT_CENTERED
 	_check_anim_btn.size_flags_vertical  = Control.SIZE_SHRINK_CENTER
-	# Estado inicial según AnimManager
 	var activo_inicial: bool = true
 	if has_node("/root/AnimManager"): activo_inicial = AnimManager.activas
 	var tex_ini = load(ICO_CHK_VERDE if activo_inicial else ICO_CHK_GRIS) as Texture2D
@@ -184,22 +233,22 @@ func _crear_header_con_oso(titulo: String, vp_w: float) -> Control:
 	return row
 
 # ---------------------------------------------------------------------------
-# Fila 2: panel.svg de fondo (todo el ancho, margen uniforme) + tarjetas
+# Fila 2: panel.svg de fondo + 2 botones: Actividades y Estadísticas Alumnos
 # ---------------------------------------------------------------------------
 
 func _crear_panel_con_tarjetas(mg: int, vp_h: float) -> Control:
 	var margin_outer = MarginContainer.new()
 	margin_outer.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	margin_outer.size_flags_vertical   = Control.SIZE_EXPAND_FILL  # llena el espacio restante
+	margin_outer.size_flags_vertical   = Control.SIZE_EXPAND_FILL
 	margin_outer.add_theme_constant_override("margin_left",   mg)
 	margin_outer.add_theme_constant_override("margin_right",  mg)
-	margin_outer.add_theme_constant_override("margin_top",    mg)  # igual al horizontal
+	margin_outer.add_theme_constant_override("margin_top",    mg)
 	margin_outer.add_theme_constant_override("margin_bottom", mg)
 	margin_outer.z_index = 1
 
 	var panel_pc = PanelContainer.new()
 	panel_pc.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	panel_pc.size_flags_vertical   = Control.SIZE_EXPAND_FILL  # panel llena el margen exterior
+	panel_pc.size_flags_vertical   = Control.SIZE_EXPAND_FILL
 	margin_outer.add_child(panel_pc)
 
 	var tex_panel = load(ICO_PANEL) as Texture2D
@@ -221,14 +270,30 @@ func _crear_panel_con_tarjetas(mg: int, vp_h: float) -> Control:
 	panel_pc.add_child(center_inner)
 
 	var hbox = HBoxContainer.new()
-	hbox.add_theme_constant_override("separation", 28)
+	hbox.add_theme_constant_override("separation", 48)
 	center_inner.add_child(hbox)
 
+	# Botón 1: Actividades (selecciona alumno -> elige actividad)
 	hbox.add_child(_crear_tarjeta(
 		"Actividades",
 		"res://assets/iconos/actividades.png",
 		MANDARINA,
-		"res://menu_actividades.tscn"
+		func(card: PanelContainer):
+			if has_node("/root/SesionState"):
+				SesionState.modo_seleccion = "actividades"
+			_ir_a(card, "res://login_profesor.tscn")
+	))
+
+	# Botón 2: Estadísticas Alumnos (selecciona alumno -> ve estadísticas y reporte)
+	var ico_est := ICO_REPORTE_OPT if ResourceLoader.exists(ICO_REPORTE_OPT) else ICO_PREGUNTAS
+	hbox.add_child(_crear_tarjeta(
+		"Estadísticas\nAlumnos",
+		ico_est,
+		TURQUESA,
+		func(card: PanelContainer):
+			if has_node("/root/SesionState"):
+				SesionState.modo_seleccion = "estadisticas"
+			_ir_a(card, "res://login_profesor.tscn")
 	))
 
 	return margin_outer
@@ -237,9 +302,9 @@ func _crear_panel_con_tarjetas(mg: int, vp_h: float) -> Control:
 # Tarjeta con boton.svg
 # ---------------------------------------------------------------------------
 
-func _crear_tarjeta(nombre: String, icono: String, acento: Color, escena: String) -> PanelContainer:
+func _crear_tarjeta(nombre: String, icono: String, acento: Color, accion: Callable) -> PanelContainer:
 	var card = PanelContainer.new()
-	card.custom_minimum_size = Vector2(176, 192)
+	card.custom_minimum_size = Vector2(220, 200)
 	card.size_flags_vertical  = Control.SIZE_SHRINK_CENTER
 	card.mouse_filter         = Control.MOUSE_FILTER_STOP
 
@@ -258,7 +323,7 @@ func _crear_tarjeta(nombre: String, icono: String, acento: Color, escena: String
 
 	var vbox = VBoxContainer.new()
 	vbox.alignment = BoxContainer.ALIGNMENT_CENTER
-	vbox.add_theme_constant_override("separation", 14)
+	vbox.add_theme_constant_override("separation", 12)
 	card.add_child(vbox)
 
 	var tex = load(icono) as Texture2D
@@ -273,13 +338,15 @@ func _crear_tarjeta(nombre: String, icono: String, acento: Color, escena: String
 	else:
 		vbox.add_child(_crear_label("▶", 48, acento, false))
 
-	vbox.add_child(_crear_label(nombre, 24, Color.WHITE, true))
+	var lbl = _crear_label(nombre, 24, Color.WHITE, true)
+	lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	vbox.add_child(lbl)
 
 	card.gui_input.connect(func(ev: InputEvent):
 		if ev is InputEventScreenTouch and ev.pressed:
-			_ir_a(card, escena)
+			accion.call(card)
 		elif ev is InputEventMouseButton and ev.pressed and ev.button_index == MOUSE_BUTTON_LEFT:
-			_ir_a(card, escena)
+			accion.call(card)
 	)
 	_iniciar_wobble(card)
 	return card

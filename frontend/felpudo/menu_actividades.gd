@@ -71,7 +71,11 @@ func _construir_ui():
 	stack.add_theme_constant_override("separation", -OVERLAP)
 	root_vbox.add_child(stack)
 
-	var header = _crear_header_banner("Actividades", vp_w)
+	var titulo_banner := "Actividades"
+	if has_node("/root/SesionState") and SesionState.tiene_alumno_seleccionado():
+		titulo_banner = "Actividades - " + str(SesionState.alumno_actual.get("nombre", ""))
+
+	var header = _crear_header_banner(titulo_banner, vp_w)
 	header.z_index = 2
 	stack.add_child(header)
 
@@ -170,17 +174,37 @@ func _crear_header_banner(titulo: String, _vp_w: float) -> Control:
 		if _sfx_cerrar: _sfx_cerrar.play()
 		if not (has_node("/root/AnimManager") and AnimManager.activas):
 			await get_tree().create_timer(0.12).timeout
-			get_tree().change_scene_to_file("res://menu_principal.tscn")
+			_volver_atras()
 			return
 		btn_x.pivot_offset = btn_x.size / 2.0
 		var tw = create_tween()
 		tw.tween_property(btn_x, "scale", Vector2(0.78, 0.78), 0.08).set_trans(Tween.TRANS_QUART)
 		tw.tween_property(btn_x, "scale", Vector2(1.0, 1.0),   0.12).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
-		tw.tween_callback(func(): get_tree().change_scene_to_file("res://menu_principal.tscn"))
+		tw.tween_callback(_volver_atras)
 	)
 	banner_wrap.add_child(btn_x)
 
 	return banner_wrap
+
+func _volver_atras():
+	var destino := "res://menu_principal.tscn"
+	if has_node("/root/SesionState") and SesionState.esta_autenticado():
+		destino = "res://login_profesor.tscn"
+		if SesionState.sesion_activa_id > 0:
+			var http = HTTPRequest.new()
+			add_child(http)
+			var body = JSON.stringify({"sesion_id": SesionState.sesion_activa_id})
+			http.request_completed.connect(func(_r, _c, _h, _b):
+				http.queue_free()
+				SesionState.limpiar_alumno_activo()
+				get_tree().change_scene_to_file(destino)
+			)
+			var err = http.request(Config.HTTP_SESION_FIN, SesionState.obtener_headers_json(true), HTTPClient.METHOD_POST, body)
+			if err == OK:
+				return
+			http.queue_free()
+		SesionState.limpiar_alumno_activo()
+	get_tree().change_scene_to_file(destino)
 
 # ---------------------------------------------------------------------------
 # Tarjetas de actividad — boton.svg + layout horizontal, responsivo

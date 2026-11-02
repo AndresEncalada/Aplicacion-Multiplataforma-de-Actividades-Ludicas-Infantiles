@@ -435,11 +435,11 @@ func _process(delta):
 				var data = JSON.parse_string(packet.get_string_from_utf8())
 				if data: _procesar_mensaje(data)
 	elif state == WebSocketPeer.STATE_CLOSED:
-		if ya_conectado:
-			ya_conectado = false
-			if is_instance_valid(_instruccion_label):
-				_instruccion_label.text = "Reconectando..."
-			reconectando = true; tiempo_reconexion = 3.0
+		if is_instance_valid(_instruccion_label):
+			_instruccion_label.text = "Sin conexión. Por favor, verifique las conexiones o contacte al administrador."
+		ya_conectado = false
+		reconectando = true
+		tiempo_reconexion = 3.0
 
 func _actualizar_video(frame_bytes: PackedByteArray):
 	var img = Image.new()

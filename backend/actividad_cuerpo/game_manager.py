@@ -28,6 +28,8 @@ class GameManager:
         self.indice_actividad_actual = 0
         self.tiempo_inicio_actividad = 0
         self.tiempo_limite_actividad = 15.0
+        self._ultimo_indice_notificado = -1
+        self._fallo_registrado_en_indice = -1
         
     def torso_detectado(self):
         self.estado = "esperando_mano"
@@ -42,9 +44,11 @@ class GameManager:
         self.estado = "jugando"
         self.indice_actividad_actual = 0
         self.tiempo_inicio_actividad = time.time()
+        self._ultimo_indice_notificado = -1
+        self._fallo_registrado_en_indice = -1
         
         # ELEGIR 10 ACTIVIDADES AL AZAR DEL POOL
-        self.secuencia_actividades =  random.choices(self.pool_actividades, k=10)
+        self.secuencia_actividades = random.choices(self.pool_actividades, k=10)
         
         return self.obtener_instruccion_actual()
     
@@ -59,7 +63,19 @@ class GameManager:
         
         # Si el tiempo se acabó, enviar evento de derrota
         if tiempo_restante <= 0:
-            return {"evento": "tiempo_agotado", "mensaje": "Se acabó el tiempo"}
+            es_nuevo_fallo = (self._fallo_registrado_en_indice != self.indice_actividad_actual)
+            self._fallo_registrado_en_indice = self.indice_actividad_actual
+            return {
+                "evento": "tiempo_agotado",
+                "mensaje": "Se acabó el tiempo",
+                "id_actividad": actividad["id"],
+                "instruccion": actividad["instruccion"],
+                "tiempo_respuesta": round(self.tiempo_limite_actividad, 2),
+                "nuevo_fallo": es_nuevo_fallo,
+            }
+        
+        es_nueva_instruccion = (self._ultimo_indice_notificado != self.indice_actividad_actual)
+        self._ultimo_indice_notificado = self.indice_actividad_actual
         
         return {
             "evento": "instruccion_actividad",
@@ -67,10 +83,15 @@ class GameManager:
             "progreso": f"{self.indice_actividad_actual + 1}/10",
             "tiempo_restante": tiempo_restante,
             "tipo": actividad["tipo"],
-            "objetivo": actividad.get("objetivo")
+            "objetivo": actividad.get("objetivo"),
+            "id_actividad": actividad["id"],
+            "nueva_instruccion": es_nueva_instruccion,
         }
     
     def actividad_completada(self):
+        actividad_lograda = self.secuencia_actividades[self.indice_actividad_actual]
+        tiempo_tomado = max(0.5, round(time.time() - self.tiempo_inicio_actividad, 2))
+        
         self.indice_actividad_actual += 1
         self.tiempo_inicio_actividad = time.time()
         self.cooldown_hasta = time.time() + 2.0
@@ -80,12 +101,19 @@ class GameManager:
         self.tiempo_limite_actividad = 15.0 - (progreso * 7.0)
         
         if self.indice_actividad_actual >= 10:
-            return self.completar_juego()
+            res = self.completar_juego()
+            res["id_actividad"] = actividad_lograda["id"]
+            res["instruccion"] = actividad_lograda["instruccion"]
+            res["tiempo_respuesta"] = tiempo_tomado
+            return res
         
         return {
             "evento": "actividad_exitosa",
             "mensaje": "Muy bien",
-            "progreso": f"{self.indice_actividad_actual}/10"
+            "progreso": f"{self.indice_actividad_actual}/10",
+            "id_actividad": actividad_lograda["id"],
+            "instruccion": actividad_lograda["instruccion"],
+            "tiempo_respuesta": tiempo_tomado,
         }
     
     def completar_juego(self):
@@ -98,6 +126,8 @@ class GameManager:
         self.tiempo_limite_actividad = 15.0
         self.cooldown_hasta = 0
         self.secuencia_actividades = []
+        self._ultimo_indice_notificado = -1
+        self._fallo_registrado_en_indice = -1
     
     def verificar_actividad(self, evento_actividad, keypoints, activity_manager):
         if self.estado != "jugando":

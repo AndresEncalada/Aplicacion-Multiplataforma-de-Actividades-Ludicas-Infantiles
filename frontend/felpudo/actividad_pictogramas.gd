@@ -575,7 +575,12 @@ func _manejar_mensaje(data):
 		_mostrar_solo_popup()
 	elif evento == "grabacion_iniciada":
 		pregunta_label.text = "Grabando... habla ahora"
-	elif evento == "respuesta_audio" or evento == "error_audio":
+	elif evento == "error_audio":
+		pregunta_label.text = "Asistente no disponible.\nPor favor, verifique las conexiones o contacte al administrador."
+		btn_microfono.visible = true
+		is_recording = false
+		btn_microfono.scale = Vector2(1.0, 1.0)
+	elif evento == "respuesta_audio":
 		var respuesta = data.get("respuesta_sistema", data.get("mensaje", "No pude entender eso."))
 		pregunta_label.text = respuesta
 		btn_microfono.visible = true

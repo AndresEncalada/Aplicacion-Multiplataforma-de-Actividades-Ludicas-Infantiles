@@ -11,7 +11,7 @@ config_version=5
 [application]
 
 config/name="Felpudo"
-run/main_scene="res://menu_principal.tscn"
+run/main_scene="res://login_profesor.tscn"
 config/features=PackedStringArray("4.7", "GL Compatibility")
 config/icon="res://icon.svg"
 
@@ -23,6 +23,7 @@ driver/enable_input=true
 
 Config="*res://config.gd"
 AnimManager="*res://anim_manager.gd"
+SesionState="*res://sesion_state.gd"
 
 [display]
 

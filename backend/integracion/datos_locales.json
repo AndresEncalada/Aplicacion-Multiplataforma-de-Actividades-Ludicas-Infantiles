@@ -1,0 +1,489 @@
+{
+  "profesores": [
+    {
+      "id": 1,
+      "username": "prof_maria",
+      "password_hash": "pbkdf2_sha256$260000$a1b2c3d4e5f60718$RgDaFXvFSDzkmY+T5P8csER6f4QXpFqdPMhispYh2TE=",
+      "first_name": "María",
+      "last_name": "Gómez",
+      "email": "maria.gomez@felpudo.edu.ec"
+    },
+    {
+      "id": 2,
+      "username": "prof_carlos",
+      "password_hash": "pbkdf2_sha256$260000$f1e2d3c4b5a69788$xg8yn0045RpmE4hH5+jseiz+eKO8ohB0kQo8miHYJRM=",
+      "first_name": "Carlos",
+      "last_name": "Mendoza",
+      "email": "carlos.mendoza@felpudo.edu.ec"
+    },
+    {
+      "id": 3,
+      "username": "admin",
+      "password_hash": "pbkdf2_sha256$260000$1122334455667788$6sy7C2K0Ybfp/DLaPbFRe3rJP2VucfsJ7edKPPvxBSI=",
+      "first_name": "Elena",
+      "last_name": "Suárez",
+      "email": "admin@felpudo.edu.ec"
+    }
+  ],
+  "alumnos": [
+    {
+      "id": 1,
+      "usuario": 1,
+      "nombre": "Mateo",
+      "apellido": "Pérez",
+      "fec_nacimiento": "14-05-2022",
+      "edad": 4,
+      "nivel": "Inicial",
+      "discapacidad": "Ninguna"
+    },
+    {
+      "id": 2,
+      "usuario": 1,
+      "nombre": "Valentina",
+      "apellido": "Torres",
+      "fec_nacimiento": "08-11-2022",
+      "edad": 3,
+      "nivel": "Inicial",
+      "discapacidad": "Lenguaje leve"
+    },
+    {
+      "id": 3,
+      "usuario": 1,
+      "nombre": "Lucas",
+      "apellido": "Sánchez",
+      "fec_nacimiento": "20-09-2021",
+      "edad": 5,
+      "nivel": "Inicial",
+      "discapacidad": "Motricidad fina"
+    },
+    {
+      "id": 4,
+      "usuario": 1,
+      "nombre": "Sofía",
+      "apellido": "Ramírez",
+      "fec_nacimiento": "12-02-2023",
+      "edad": 3,
+      "nivel": "Inicial",
+      "discapacidad": "Ninguna"
+    },
+    {
+      "id": 5,
+      "usuario": 2,
+      "nombre": "Sebastián",
+      "apellido": "Morales",
+      "fec_nacimiento": "19-03-2022",
+      "edad": 4,
+      "nivel": "Inicial",
+      "discapacidad": "Ninguna"
+    },
+    {
+      "id": 6,
+      "usuario": 2,
+      "nombre": "Camila",
+      "apellido": "Herrera",
+      "fec_nacimiento": "04-12-2021",
+      "edad": 4,
+      "nivel": "Inicial",
+      "discapacidad": "Atención dispersa"
+    },
+    {
+      "id": 7,
+      "usuario": 2,
+      "nombre": "Thiago",
+      "apellido": "Castro",
+      "fec_nacimiento": "25-01-2023",
+      "edad": 3,
+      "nivel": "Inicial",
+      "discapacidad": "Ninguna"
+    },
+    {
+      "id": 8,
+      "usuario": 3,
+      "nombre": "Lucía",
+      "apellido": "Vargas",
+      "fec_nacimiento": "30-07-2022",
+      "edad": 4,
+      "nivel": "Inicial",
+      "discapacidad": "Ninguna"
+    },
+    {
+      "id": 9,
+      "usuario": 3,
+      "nombre": "Emiliano",
+      "apellido": "Ríos",
+      "fec_nacimiento": "15-10-2021",
+      "edad": 5,
+      "nivel": "Inicial",
+      "discapacidad": "Lenguaje leve"
+    }
+  ],
+  "sesiones": [
+    {
+      "id": 1,
+      "nn": 1,
+      "profesor_id": 1,
+      "categoria": 1,
+      "fecha_ini": "12-10-2026 09:10",
+      "fecha_fin": "12-10-2026 09:25",
+      "area_visitada": "Aspectos de Lateralidad y Cuerpo",
+      "estado": "finalizada",
+      "eventos": [
+        {
+          "tipo": "cuerpo",
+          "codigo_bd": "a2_17",
+          "area_ref": "area2",
+          "area_nombre": "Aspectos de Lateralidad",
+          "actividad_nombre": "Lateralidad/LevantaManoDerecha",
+          "instruccion": "Levanta tu mano derecha",
+          "exito": true,
+          "intentos": 1,
+          "tiempo_seg": 7.2,
+          "indicador": "adquirido"
+        },
+        {
+          "tipo": "cuerpo",
+          "codigo_bd": "a2_18",
+          "area_ref": "area2",
+          "area_nombre": "Aspectos de Lateralidad",
+          "actividad_nombre": "Lateralidad/LevantaManoIzquierda",
+          "instruccion": "Levanta tu mano izquierda",
+          "exito": false,
+          "intentos": 1,
+          "tiempo_seg": 15.0,
+          "indicador": "iniciado"
+        },
+        {
+          "tipo": "cuerpo",
+          "codigo_bd": "a3_07",
+          "area_ref": "area3",
+          "area_nombre": "Reconocimiento de las Partes del Cuerpo",
+          "actividad_nombre": "Cuerpo/TocaCabeza",
+          "instruccion": "Toca tu cabeza",
+          "exito": true,
+          "intentos": 1,
+          "tiempo_seg": 6.5,
+          "indicador": "adquirido"
+        },
+        {
+          "tipo": "cuerpo",
+          "codigo_bd": "a2_10",
+          "area_ref": "area2",
+          "area_nombre": "Aspectos de Lateralidad",
+          "actividad_nombre": "Lateralidad/TocaOrejas",
+          "instruccion": "Toca tus orejas",
+          "exito": false,
+          "intentos": 1,
+          "tiempo_seg": 15.0,
+          "indicador": "iniciado"
+        },
+        {
+          "tipo": "pictogramas",
+          "codigo_bd": "pic_perro",
+          "area_ref": "area1_6",
+          "area_nombre": "Socialización y Comprensión Verbal",
+          "actividad_nombre": "Pictogramas/Perro",
+          "instruccion": "Pictograma: perro (2 preguntas)",
+          "exito": true,
+          "intentos": 1,
+          "tiempo_seg": 5.0,
+          "indicador": "adquirido"
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "nn": 1,
+      "profesor_id": 1,
+      "categoria": 1,
+      "fecha_ini": "15-10-2026 10:00",
+      "fecha_fin": "15-10-2026 10:18",
+      "area_visitada": "Aspectos de Lateralidad y Pictogramas",
+      "estado": "finalizada",
+      "eventos": [
+        {
+          "tipo": "cuerpo",
+          "codigo_bd": "a2_17",
+          "area_ref": "area2",
+          "area_nombre": "Aspectos de Lateralidad",
+          "actividad_nombre": "Lateralidad/LevantaManoDerecha",
+          "instruccion": "Levanta tu mano derecha",
+          "exito": true,
+          "intentos": 1,
+          "tiempo_seg": 4.8,
+          "indicador": "adquirido"
+        },
+        {
+          "tipo": "cuerpo",
+          "codigo_bd": "a2_18",
+          "area_ref": "area2",
+          "area_nombre": "Aspectos de Lateralidad",
+          "actividad_nombre": "Lateralidad/LevantaManoIzquierda",
+          "instruccion": "Levanta tu mano izquierda",
+          "exito": true,
+          "intentos": 1,
+          "tiempo_seg": 6.1,
+          "indicador": "adquirido"
+        },
+        {
+          "tipo": "cuerpo",
+          "codigo_bd": "a3_07",
+          "area_ref": "area3",
+          "area_nombre": "Reconocimiento de las Partes del Cuerpo",
+          "actividad_nombre": "Cuerpo/TocaCabeza",
+          "instruccion": "Toca tu cabeza",
+          "exito": true,
+          "intentos": 1,
+          "tiempo_seg": 5.2,
+          "indicador": "adquirido"
+        },
+        {
+          "tipo": "cuerpo",
+          "codigo_bd": "a2_10",
+          "area_ref": "area2",
+          "area_nombre": "Aspectos de Lateralidad",
+          "actividad_nombre": "Lateralidad/TocaOrejas",
+          "instruccion": "Toca tus orejas",
+          "exito": false,
+          "intentos": 1,
+          "tiempo_seg": 15.0,
+          "indicador": "iniciado"
+        },
+        {
+          "tipo": "pictogramas",
+          "codigo_bd": "pic_capibara",
+          "area_ref": "area1_6",
+          "area_nombre": "Socialización y Comprensión Verbal",
+          "actividad_nombre": "Pictogramas/Capibara",
+          "instruccion": "Pictograma: capibara (3 preguntas)",
+          "exito": true,
+          "intentos": 1,
+          "tiempo_seg": 4.5,
+          "indicador": "adquirido"
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "nn": 2,
+      "profesor_id": 1,
+      "categoria": 1,
+      "fecha_ini": "13-10-2026 11:00",
+      "fecha_fin": "13-10-2026 11:15",
+      "area_visitada": "Reconocimiento de las Partes del Cuerpo",
+      "estado": "finalizada",
+      "eventos": [
+        {
+          "tipo": "cuerpo",
+          "codigo_bd": "a3_07",
+          "area_ref": "area3",
+          "area_nombre": "Reconocimiento de las Partes del Cuerpo",
+          "actividad_nombre": "Cuerpo/TocaCabeza",
+          "instruccion": "Toca tu cabeza",
+          "exito": true,
+          "intentos": 1,
+          "tiempo_seg": 8.9,
+          "indicador": "proceso"
+        },
+        {
+          "tipo": "cuerpo",
+          "codigo_bd": "a3_05",
+          "area_ref": "area3",
+          "area_nombre": "Reconocimiento de las Partes del Cuerpo",
+          "actividad_nombre": "Cuerpo/TocaHombros",
+          "instruccion": "Toca tus hombros",
+          "exito": false,
+          "intentos": 1,
+          "tiempo_seg": 15.0,
+          "indicador": "iniciado"
+        },
+        {
+          "tipo": "cuerpo",
+          "codigo_bd": "a2_17",
+          "area_ref": "area2",
+          "area_nombre": "Aspectos de Lateralidad",
+          "actividad_nombre": "Lateralidad/LevantaManoDerecha",
+          "instruccion": "Levanta tu mano derecha",
+          "exito": false,
+          "intentos": 1,
+          "tiempo_seg": 15.0,
+          "indicador": "iniciado"
+        },
+        {
+          "tipo": "pictogramas",
+          "codigo_bd": "pic_medico",
+          "area_ref": "area1_6",
+          "area_nombre": "Socialización y Comprensión Verbal",
+          "actividad_nombre": "Pictogramas/Medico",
+          "instruccion": "Pictograma: medico (2 preguntas)",
+          "exito": true,
+          "intentos": 1,
+          "tiempo_seg": 6.0,
+          "indicador": "adquirido"
+        }
+      ]
+    },
+    {
+      "id": 4,
+      "nn": 2,
+      "profesor_id": 1,
+      "categoria": 1,
+      "fecha_ini": "16-10-2026 11:10",
+      "fecha_fin": "16-10-2026 11:25",
+      "area_visitada": "Reconocimiento de las Partes del Cuerpo",
+      "estado": "finalizada",
+      "eventos": [
+        {
+          "tipo": "cuerpo",
+          "codigo_bd": "a3_07",
+          "area_ref": "area3",
+          "area_nombre": "Reconocimiento de las Partes del Cuerpo",
+          "actividad_nombre": "Cuerpo/TocaCabeza",
+          "instruccion": "Toca tu cabeza",
+          "exito": true,
+          "intentos": 1,
+          "tiempo_seg": 5.5,
+          "indicador": "adquirido"
+        },
+        {
+          "tipo": "cuerpo",
+          "codigo_bd": "a3_05",
+          "area_ref": "area3",
+          "area_nombre": "Reconocimiento de las Partes del Cuerpo",
+          "actividad_nombre": "Cuerpo/TocaHombros",
+          "instruccion": "Toca tus hombros",
+          "exito": true,
+          "intentos": 1,
+          "tiempo_seg": 7.1,
+          "indicador": "adquirido"
+        },
+        {
+          "tipo": "cuerpo",
+          "codigo_bd": "a2_17",
+          "area_ref": "area2",
+          "area_nombre": "Aspectos de Lateralidad",
+          "actividad_nombre": "Lateralidad/LevantaManoDerecha",
+          "instruccion": "Levanta tu mano derecha",
+          "exito": false,
+          "intentos": 1,
+          "tiempo_seg": 15.0,
+          "indicador": "iniciado"
+        },
+        {
+          "tipo": "pictogramas",
+          "codigo_bd": "pic_leon",
+          "area_ref": "area1_6",
+          "area_nombre": "Socialización y Comprensión Verbal",
+          "actividad_nombre": "Pictogramas/Leon",
+          "instruccion": "Pictograma: leon (3 preguntas)",
+          "exito": true,
+          "intentos": 1,
+          "tiempo_seg": 4.9,
+          "indicador": "adquirido"
+        }
+      ]
+    },
+    {
+      "id": 5,
+      "nn": 3,
+      "profesor_id": 1,
+      "categoria": 1,
+      "fecha_ini": "14-10-2026 09:30",
+      "fecha_fin": "14-10-2026 09:45",
+      "area_visitada": "Lateralidad y Cuerpo",
+      "estado": "finalizada",
+      "eventos": [
+        {
+          "tipo": "cuerpo",
+          "codigo_bd": "a1_60",
+          "area_ref": "area1_5",
+          "area_nombre": "Socialización",
+          "actividad_nombre": "Palmas/LevantaAmbasManos",
+          "instruccion": "Levanta ambas manos",
+          "exito": true,
+          "intentos": 1,
+          "tiempo_seg": 5.8,
+          "indicador": "adquirido"
+        },
+        {
+          "tipo": "cuerpo",
+          "codigo_bd": "a3_08",
+          "area_ref": "area3",
+          "area_nombre": "Reconocimiento de las Partes del Cuerpo",
+          "actividad_nombre": "Cuerpo/CruzaBrazos",
+          "instruccion": "Cruza los brazos",
+          "exito": true,
+          "intentos": 1,
+          "tiempo_seg": 7.4,
+          "indicador": "adquirido"
+        },
+        {
+          "tipo": "cuerpo",
+          "codigo_bd": "a3_09",
+          "area_ref": "area3",
+          "area_nombre": "Reconocimiento de las Partes del Cuerpo",
+          "actividad_nombre": "Cuerpo/ManosEnCintura",
+          "instruccion": "Pon las manos en la cintura",
+          "exito": false,
+          "intentos": 1,
+          "tiempo_seg": 15.0,
+          "indicador": "iniciado"
+        }
+      ]
+    },
+    {
+      "id": 6,
+      "nn": 1,
+      "profesor_id": 1,
+      "categoria": 1,
+      "fecha_ini": "19-10-2026 01:04",
+      "fecha_fin": "19-10-2026 01:06",
+      "area_visitada": "Sesión General",
+      "estado": "finalizada",
+      "eventos": []
+    },
+    {
+      "id": 7,
+      "nn": 3,
+      "profesor_id": 1,
+      "categoria": 1,
+      "fecha_ini": "19-10-2026 01:07",
+      "fecha_fin": "19-10-2026 01:07",
+      "area_visitada": "Sesión General",
+      "estado": "finalizada",
+      "eventos": []
+    },
+    {
+      "id": 8,
+      "nn": 1,
+      "profesor_id": 1,
+      "categoria": 1,
+      "fecha_ini": "19-10-2026 01:10",
+      "fecha_fin": "19-10-2026 01:10",
+      "area_visitada": "Sesión General",
+      "estado": "finalizada",
+      "eventos": []
+    },
+    {
+      "id": 9,
+      "nn": 1,
+      "profesor_id": 1,
+      "categoria": 1,
+      "fecha_ini": "19-10-2026 14:14",
+      "fecha_fin": "19-10-2026 14:15",
+      "area_visitada": "Sesión General",
+      "estado": "finalizada",
+      "eventos": []
+    },
+    {
+      "id": 10,
+      "nn": 1,
+      "profesor_id": 1,
+      "categoria": 1,
+      "fecha_ini": "20-10-2026 18:19",
+      "fecha_fin": "20-10-2026 18:19",
+      "area_visitada": "Sesión General",
+      "estado": "finalizada",
+      "eventos": []
+    }
+  ]
+}
