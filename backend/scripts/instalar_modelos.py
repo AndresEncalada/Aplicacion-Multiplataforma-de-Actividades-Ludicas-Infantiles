@@ -3,7 +3,7 @@ Descarga e instala los modelos de IA necesarios para el backend.
 Ejecutar desde la raíz del backend: uv run python scripts/instalar_modelos.py
 
 Descarga total aproximada: ~1.5 GB
-  - Whisper.cpp small (~465 MB)
+  - Whisper small fine-tuneado en español (~465 MB)
   - Qwen 2.5 1.5B GGUF (~1.06 GB)
 """
 import os
@@ -13,10 +13,10 @@ from pathlib import Path
 
 MODELOS = {
     "whisper": {
-        "url": "https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-small.bin",
+        "url": "https://huggingface.co/anddres2310/whisper-small-es-finetuned/resolve/main/ggml-model.bin",
         "archivo": "modelos_whisper/ggml-small.bin",
         "carpeta_destino": "modelos_whisper",
-        "descripcion": "Whisper.cpp small (transcripcion de audio en espanol)"
+        "descripcion": "Whisper small fine-tuneado en espanol"
     },
     "llm": {
         "url": "https://huggingface.co/Qwen/Qwen2.5-1.5B-Instruct-GGUF/resolve/main/qwen2.5-1.5b-instruct-q4_k_m.gguf",

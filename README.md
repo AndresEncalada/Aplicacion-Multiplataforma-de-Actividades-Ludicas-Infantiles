@@ -48,13 +48,10 @@ uv run python main.py   # inicia el servidor en http://127.0.0.1:8000
 
 ## Requisitos
 
-| | Mínimo |
+| | Versión |
 |---|---|
 | Python | 3.11+ con `uv` |
 | Godot | 4.x |
-| RAM | 4 GB (8 GB recomendado) |
-| Cámara | USB o módulo integrado |
-| Micrófono | Requerido para actividad de pictogramas |
 | OS | Linux / Raspberry Pi OS / Windows / macOS |
 
 ---
