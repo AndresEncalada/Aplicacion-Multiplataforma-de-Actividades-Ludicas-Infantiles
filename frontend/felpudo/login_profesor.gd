@@ -295,25 +295,101 @@ func _construir_vista_alumnos():
 	search.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	vbox_outer.add_child(search)
 
-	# --- Fila de filtros ---
-	var filtros_hbox = HBoxContainer.new()
-	filtros_hbox.add_theme_constant_override("separation", 8)
-	vbox_outer.add_child(filtros_hbox)
+	# --- Barra de filtros ---
+	var _vp_f := get_viewport().get_visible_rect().size
+	var compacto: bool = _vp_f.x < 1280 or _vp_f.y < 720
+	var chip_h: int   = 52 if compacto else 38
+	var lbl_sz: int   = 14 if compacto else 13
+
+	var filtros_panel = PanelContainer.new()
+	filtros_panel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	var sf_fp = StyleBoxFlat.new()
+	sf_fp.bg_color = Color(0.89, 0.91, 0.96)
+	sf_fp.set_corner_radius_all(18)
+	sf_fp.content_margin_left   = 14; sf_fp.content_margin_right  = 14
+	sf_fp.content_margin_top    = 10; sf_fp.content_margin_bottom = 10
+	filtros_panel.add_theme_stylebox_override("panel", sf_fp)
+	vbox_outer.add_child(filtros_panel)
+
+	# En pantallas pequeñas: dos filas (Edad arriba, Ordenar abajo).
+	# En pantallas grandes: una sola fila horizontal.
+	var filtros_root: BoxContainer
+	if compacto:
+		var vb = VBoxContainer.new()
+		vb.add_theme_constant_override("separation", 8)
+		filtros_root = vb
+	else:
+		var hb = HBoxContainer.new()
+		hb.add_theme_constant_override("separation", 10)
+		filtros_root = hb
+	filtros_panel.add_child(filtros_root)
 
 	var estado = {"edad": -1, "orden_aciertos": false}
 
+	# -- Grupo Edad --
+	var grp_edad = HBoxContainer.new()
+	grp_edad.add_theme_constant_override("separation", 6)
+	grp_edad.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	filtros_root.add_child(grp_edad)
+
+	var lbl_edad_cat = _crear_label("Edad:", lbl_sz, Color(0.38, 0.44, 0.58), false)
+	lbl_edad_cat.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	grp_edad.add_child(lbl_edad_cat)
+
+	var edad_scroll = ScrollContainer.new()
+	edad_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_AUTO
+	edad_scroll.vertical_scroll_mode   = ScrollContainer.SCROLL_MODE_DISABLED
+	edad_scroll.size_flags_horizontal  = Control.SIZE_EXPAND_FILL
+	edad_scroll.custom_minimum_size    = Vector2(0, chip_h + 8)
+	grp_edad.add_child(edad_scroll)
+
+	var chips_hbox = HBoxContainer.new()
+	chips_hbox.add_theme_constant_override("separation", 6)
+	edad_scroll.add_child(chips_hbox)
+
+	var edades_unicas: Array = []
+	for al in SesionState.alumnos:
+		var e := int(al.get("edad", 0))
+		if e > 0 and not edades_unicas.has(e):
+			edades_unicas.append(e)
+	edades_unicas.sort()
+
 	var chips_edad: Array = []
-	for par in [["Todos", -1], ["3 años", 3], ["4 años", 4], ["5 años", 5]]:
-		var chip = _crear_chip_filtro(par[0])
-		filtros_hbox.add_child(chip)
-		chips_edad.append({"chip": chip, "val": par[1]})
+	var chip_todos = _crear_chip_filtro("Todos", chip_h)
+	chips_hbox.add_child(chip_todos)
+	chips_edad.append({"chip": chip_todos, "val": -1})
 
-	var spacer = Control.new()
-	spacer.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	filtros_hbox.add_child(spacer)
+	for e_val in edades_unicas:
+		var chip = _crear_chip_filtro(str(e_val) + " a", chip_h)
+		chips_hbox.add_child(chip)
+		chips_edad.append({"chip": chip, "val": e_val})
 
-	var btn_sort = _crear_chip_filtro("A-Z ↕")
-	filtros_hbox.add_child(btn_sort)
+	# En modo horizontal añadir separador vertical entre grupos
+	if not compacto:
+		var sep = VSeparator.new()
+		sep.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+		sep.custom_minimum_size = Vector2(1, 28)
+		filtros_root.add_child(sep)
+	else:
+		# En modo compacto, una línea horizontal fina separa las filas
+		var hsep = HSeparator.new()
+		hsep.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		filtros_root.add_child(hsep)
+
+	# -- Grupo Ordenar --
+	var grp_ord = HBoxContainer.new()
+	grp_ord.add_theme_constant_override("separation", 6)
+	grp_ord.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	filtros_root.add_child(grp_ord)
+
+	var lbl_ord = _crear_label("Ordenar:", lbl_sz, Color(0.38, 0.44, 0.58), false)
+	lbl_ord.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	grp_ord.add_child(lbl_ord)
+
+	var chip_az       = _crear_chip_filtro("A-Z", chip_h)
+	var chip_aciertos = _crear_chip_filtro("★ Aciertos", chip_h)
+	grp_ord.add_child(chip_az)
+	grp_ord.add_child(chip_aciertos)
 
 	# --- Lista de tarjetas ---
 	var scroll = ScrollContainer.new()
@@ -406,17 +482,28 @@ func _construir_vista_alumnos():
 				aplicar.call()
 		)
 
-	btn_sort.gui_input.connect(func(ev: InputEvent):
+	# Chips de orden: radio-button (uno siempre activo, se excluyen mutuamente)
+	chip_az.gui_input.connect(func(ev: InputEvent):
 		if (ev is InputEventMouseButton and ev.pressed and ev.button_index == MOUSE_BUTTON_LEFT) \
 		or (ev is InputEventScreenTouch and ev.pressed):
-			estado["orden_aciertos"] = not estado["orden_aciertos"]
-			_chip_set_activo(btn_sort, estado["orden_aciertos"])
-			var lbl_s = btn_sort.get_child(0).get_child(0) as Label
-			if lbl_s: lbl_s.text = "⭐ Aciertos" if estado["orden_aciertos"] else "A-Z ↕"
+			estado["orden_aciertos"] = false
+			_chip_set_activo(chip_az,       true)
+			_chip_set_activo(chip_aciertos, false)
+			aplicar.call()
+	)
+	chip_aciertos.gui_input.connect(func(ev: InputEvent):
+		if (ev is InputEventMouseButton and ev.pressed and ev.button_index == MOUSE_BUTTON_LEFT) \
+		or (ev is InputEventScreenTouch and ev.pressed):
+			estado["orden_aciertos"] = true
+			_chip_set_activo(chip_az,       false)
+			_chip_set_activo(chip_aciertos, true,
+				Color(1.00, 0.50, 0.08),
+				Color(0.65, 0.30, 0.03))
 			aplicar.call()
 	)
 
 	_chip_set_activo(chips_edad[0]["chip"], true)
+	_chip_set_activo(chip_az, true)
 	aplicar.call()
 
 func _iniciar_sesion_y_abrir_actividades(alumno: Dictionary):
@@ -628,10 +715,10 @@ func _crear_header_banner(titulo: String, _vp_w: float, accion_cerrar: Callable)
 
 	var btn_x = _crear_btn_x()
 	btn_x.set_anchors_preset(Control.PRESET_CENTER_RIGHT)
-	btn_x.offset_left   = -73
-	btn_x.offset_top    = -32
+	btn_x.offset_left   = -106
+	btn_x.offset_top    = -48
 	btn_x.offset_right  = -10
-	btn_x.offset_bottom = 31
+	btn_x.offset_bottom = 48
 	btn_x.z_index = 5
 	btn_x.pressed.connect(func():
 		if _btn_bloqueado: return
@@ -789,36 +876,44 @@ func _crear_item_historial(titulo: String, subtitulo: String) -> PanelContainer:
 	vbox.add_child(_crear_label(subtitulo, 15, Color(0.88, 0.92, 1.0), false))
 	return card
 
-func _crear_chip_filtro(texto: String) -> PanelContainer:
+func _crear_chip_filtro(texto: String, alto: int = 38) -> PanelContainer:
 	var c = PanelContainer.new()
+	c.custom_minimum_size = Vector2(0, alto)
 	c.mouse_filter = Control.MOUSE_FILTER_STOP
 	var cc = CenterContainer.new()
 	c.add_child(cc)
-	var lbl = _crear_label(texto, 15, NAVY, false)
+	var lbl = _crear_label(texto, 15, Color(0.25, 0.30, 0.42), false)
 	lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	cc.add_child(lbl)
 	_chip_set_activo(c, false)
 	return c
 
-func _chip_set_activo(c: PanelContainer, activo: bool) -> void:
+# col_bg / col_borde opcionales para usar MANDARINA en el botón de orden
+func _chip_set_activo(c: PanelContainer, activo: bool,
+		col_bg:    Color = Color(0.05, 0.68, 0.72),
+		col_borde: Color = Color(0.03, 0.46, 0.49)) -> void:
 	var sf = StyleBoxFlat.new()
 	if activo:
-		sf.bg_color    = TURQUESA
-		sf.border_color = Color(0.04, 0.50, 0.54)
+		sf.bg_color               = col_bg
+		sf.border_color           = col_borde
+		sf.border_width_bottom    = 4
+		sf.border_width_left      = 0; sf.border_width_right = 0; sf.border_width_top = 0
 	else:
-		sf.bg_color    = Color(0.86, 0.89, 0.94)
-		sf.border_color = Color(0.60, 0.65, 0.75)
-	sf.set_corner_radius_all(14)
-	sf.border_width_bottom    = 3
-	sf.content_margin_left    = 14; sf.content_margin_right  = 14
-	sf.content_margin_top     = 6;  sf.content_margin_bottom = 8
+		sf.bg_color               = Color(0.97, 0.97, 1.00)
+		sf.border_color           = Color(0.70, 0.74, 0.84)
+		sf.border_width_bottom    = 3
+		sf.border_width_left      = 0; sf.border_width_right = 0; sf.border_width_top = 0
+	sf.set_corner_radius_all(16)
+	sf.content_margin_left    = 16; sf.content_margin_right  = 16
+	sf.content_margin_top     = 4;  sf.content_margin_bottom = 8
 	c.add_theme_stylebox_override("panel", sf)
 	if c.get_child_count() > 0:
 		var cc = c.get_child(0)
 		if is_instance_valid(cc) and cc.get_child_count() > 0:
 			var lbl = cc.get_child(0) as Label
 			if lbl:
-				lbl.add_theme_color_override("font_color", Color.WHITE if activo else NAVY)
+				var col_txt = Color.WHITE if activo else Color(0.25, 0.30, 0.42)
+				lbl.add_theme_color_override("font_color", col_txt)
 
 func _crear_input(placeholder: String, es_password: bool) -> LineEdit:
 	var inp = LineEdit.new()
@@ -835,15 +930,29 @@ func _crear_input(placeholder: String, es_password: bool) -> LineEdit:
 	inp.add_theme_color_override("font_color", NAVY)
 	inp.add_theme_color_override("font_placeholder_color", Color(0.45, 0.52, 0.62))
 
+	inp.caret_blink          = true
+	inp.caret_blink_interval = 0.6
+	inp.add_theme_color_override("caret_color", NAVY)
+
 	var st = StyleBoxFlat.new()
 	st.bg_color = Color.WHITE
 	st.border_color = Color(0.70, 0.50, 0.28)
-	st.set_border_width_all(3)
+	st.set_border_width_all(2)
+	st.border_width_bottom = 4
 	st.set_corner_radius_all(14)
 	st.content_margin_left  = 16
 	st.content_margin_right = 16
 	inp.add_theme_stylebox_override("normal", st)
-	inp.add_theme_stylebox_override("focus", st)
+
+	var st_focus = StyleBoxFlat.new()
+	st_focus.bg_color = Color.WHITE
+	st_focus.border_color = TURQUESA
+	st_focus.set_border_width_all(3)
+	st_focus.border_width_bottom = 5
+	st_focus.set_corner_radius_all(14)
+	st_focus.content_margin_left  = 16
+	st_focus.content_margin_right = 16
+	inp.add_theme_stylebox_override("focus", st_focus)
 	return inp
 
 # ---------------------------------------------------------------------------

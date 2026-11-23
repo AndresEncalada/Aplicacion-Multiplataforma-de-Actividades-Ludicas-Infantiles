@@ -150,10 +150,10 @@ func _construir_ui():
 	_btn_x = _crear_btn_x()
 	_btn_x.pressed.connect(_salir_a_menu)
 	_btn_x.set_anchors_preset(Control.PRESET_TOP_RIGHT)
-	_btn_x.offset_left   = -73
-	_btn_x.offset_top    = -4
+	_btn_x.offset_left   = -106
+	_btn_x.offset_top    = 0
 	_btn_x.offset_right  = -10
-	_btn_x.offset_bottom = 59
+	_btn_x.offset_bottom = 96
 	_btn_x.z_index = 20
 	add_child(_btn_x)
 

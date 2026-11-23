@@ -71,17 +71,22 @@ func _crear_label(texto: String, tam: int, color: Color, _negrita: bool) -> Labe
 
 func _crear_btn_x() -> Button:
 	var btn = Button.new()
-	btn.custom_minimum_size = Vector2(63, 63)
+	btn.custom_minimum_size = Vector2(96, 96)
 	var empty = StyleBoxEmpty.new()
 	for state in ["normal", "hover", "pressed", "focus", "disabled"]:
 		btn.add_theme_stylebox_override(state, empty)
+	var cc = CenterContainer.new()
+	cc.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	cc.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	btn.add_child(cc)
+
 	var ir = TextureRect.new()
-	ir.texture      = load(ICO_X) as Texture2D
-	ir.expand_mode  = TextureRect.EXPAND_IGNORE_SIZE
-	ir.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
-	ir.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	ir.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	btn.add_child(ir)
+	ir.texture             = load(ICO_X) as Texture2D
+	ir.expand_mode         = TextureRect.EXPAND_IGNORE_SIZE
+	ir.stretch_mode        = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	ir.custom_minimum_size = Vector2(63, 63)
+	ir.mouse_filter        = Control.MOUSE_FILTER_IGNORE
+	cc.add_child(ir)
 	return btn
 
 

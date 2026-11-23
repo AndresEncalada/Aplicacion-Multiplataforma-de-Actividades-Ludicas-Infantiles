@@ -124,10 +124,10 @@ func _crear_header_banner(titulo: String, _vp_w: float) -> Control:
 
 	var btn_x = _crear_btn_x()
 	btn_x.set_anchors_preset(Control.PRESET_CENTER_RIGHT)
-	btn_x.offset_left   = -73
-	btn_x.offset_top    = -32
+	btn_x.offset_left   = -106
+	btn_x.offset_top    = -48
 	btn_x.offset_right  = -10
-	btn_x.offset_bottom = 31
+	btn_x.offset_bottom = 48
 	btn_x.z_index = 5
 	btn_x.pressed.connect(func():
 		if _btn_bloqueado: return

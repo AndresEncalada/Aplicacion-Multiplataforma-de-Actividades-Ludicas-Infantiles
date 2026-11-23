@@ -55,25 +55,30 @@ func _construir_ui():
 
 func _crear_boton_cerrar_sesion() -> Control:
 	var btn_x = Button.new()
-	btn_x.custom_minimum_size = Vector2(63, 63)
+	btn_x.custom_minimum_size = Vector2(96, 96)
 	btn_x.set_anchors_preset(Control.PRESET_TOP_RIGHT)
-	btn_x.offset_left   = -77
-	btn_x.offset_top    = 12
+	btn_x.offset_left   = -110
+	btn_x.offset_top    = 10
 	btn_x.offset_right  = -14
-	btn_x.offset_bottom = 75
+	btn_x.offset_bottom = 106
 	btn_x.z_index = 10
 
 	var empty = StyleBoxEmpty.new()
 	for state in ["normal", "hover", "pressed", "focus", "disabled"]:
 		btn_x.add_theme_stylebox_override(state, empty)
 
+	var cc = CenterContainer.new()
+	cc.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	cc.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	btn_x.add_child(cc)
+
 	var ir = TextureRect.new()
-	ir.texture = load(ICO_X) as Texture2D
-	ir.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-	ir.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
-	ir.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	ir.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	btn_x.add_child(ir)
+	ir.texture             = load(ICO_X) as Texture2D
+	ir.expand_mode         = TextureRect.EXPAND_IGNORE_SIZE
+	ir.stretch_mode        = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	ir.custom_minimum_size = Vector2(63, 63)
+	ir.mouse_filter        = Control.MOUSE_FILTER_IGNORE
+	cc.add_child(ir)
 
 	btn_x.pressed.connect(func():
 		if _btn_bloqueado: return
