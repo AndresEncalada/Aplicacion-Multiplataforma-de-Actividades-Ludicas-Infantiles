@@ -731,8 +731,6 @@ func _crear_input(placeholder: String, es_password: bool) -> LineEdit:
 	inp.custom_minimum_size = Vector2(400, 48)
 	inp.alignment           = HORIZONTAL_ALIGNMENT_CENTER
 	inp.add_theme_font_size_override("font_size", 20)
-	if _font:
-		inp.add_theme_font_override("font", _font)
 	inp.add_theme_color_override("font_color", NAVY)
 	inp.add_theme_color_override("font_placeholder_color", Color(0.45, 0.52, 0.62))
 
