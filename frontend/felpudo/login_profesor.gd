@@ -287,13 +287,35 @@ func _construir_vista_alumnos():
 	var vbox_outer = VBoxContainer.new()
 	vbox_outer.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	vbox_outer.size_flags_vertical   = Control.SIZE_EXPAND_FILL
-	vbox_outer.add_theme_constant_override("separation", 10)
+	vbox_outer.add_theme_constant_override("separation", 8)
 	panel_pc.add_child(vbox_outer)
 
+	# --- Barra de búsqueda ---
 	var search := _crear_input("Buscar alumno...", false)
 	search.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	vbox_outer.add_child(search)
 
+	# --- Fila de filtros ---
+	var filtros_hbox = HBoxContainer.new()
+	filtros_hbox.add_theme_constant_override("separation", 8)
+	vbox_outer.add_child(filtros_hbox)
+
+	var estado = {"edad": -1, "orden_aciertos": false}
+
+	var chips_edad: Array = []
+	for par in [["Todos", -1], ["3 años", 3], ["4 años", 4], ["5 años", 5]]:
+		var chip = _crear_chip_filtro(par[0])
+		filtros_hbox.add_child(chip)
+		chips_edad.append({"chip": chip, "val": par[1]})
+
+	var spacer = Control.new()
+	spacer.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	filtros_hbox.add_child(spacer)
+
+	var btn_sort = _crear_chip_filtro("A-Z ↕")
+	filtros_hbox.add_child(btn_sort)
+
+	# --- Lista de tarjetas ---
 	var scroll = ScrollContainer.new()
 	scroll.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	scroll.size_flags_vertical   = Control.SIZE_EXPAND_FILL
@@ -305,19 +327,18 @@ func _construir_vista_alumnos():
 	vbox_tarjetas.add_theme_constant_override("separation", 20)
 	scroll.add_child(vbox_tarjetas)
 
-	var alumnos_ordenados: Array = SesionState.alumnos.duplicate()
-	alumnos_ordenados.sort_custom(func(a, b):
-		var ka := (str(a.get("apellido", "")) + str(a.get("nombre", ""))).to_lower()
-		var kb := (str(b.get("apellido", "")) + str(b.get("nombre", ""))).to_lower()
-		return ka < kb
+	var alumnos_base: Array = SesionState.alumnos.duplicate()
+	alumnos_base.sort_custom(func(a, b):
+		return _normalizar(str(a.get("apellido","")) + str(a.get("nombre",""))) < \
+		       _normalizar(str(b.get("apellido","")) + str(b.get("nombre","")))
 	)
 
 	var entradas: Array = []
 
-	for al in alumnos_ordenados:
+	for al in alumnos_base:
 		var nombre   := str(al.get("nombre", ""))
 		var apellido := str(al.get("apellido", ""))
-		var edad     := str(al.get("edad", 4))
+		var edad     := int(al.get("edad", 4))
 		var stats: Dictionary = al.get("estadisticas", {})
 		var intentos_n := int(stats.get("total_intentos", 0))
 		var aciertos_n := int(stats.get("total_aciertos", 0))
@@ -327,16 +348,15 @@ func _construir_vista_alumnos():
 
 		var desc: String
 		if es_estadisticas:
-			desc = "Intentos: " + str(intentos_n) + "  |  Aciertos: " + str(aciertos_n) + "  |  Fallos: " + str(fallos_n) + "  |  Mejora: " + signo + str(mejora_pct) + "%"
+			desc = "Intentos: " + str(intentos_n) + "  |  Aciertos: " + str(aciertos_n) + \
+			       "  |  Fallos: " + str(fallos_n) + "  |  Mejora: " + signo + ("%.1f" % mejora_pct) + "%"
 		else:
-			desc = "Edad: " + edad + " años  —  Toca para elegir la actividad"
+			desc = "Edad: " + str(edad) + " años  —  Toca para elegir la actividad"
 
 		var ico_al := ICO_ALUMNO_OPT if ResourceLoader.exists(ICO_ALUMNO_OPT) else ICO_CUERPO
 		var card := _crear_tarjeta_horizontal(
-			apellido + ", " + nombre + " (" + edad + " años)",
-			desc,
-			ico_al,
-			TURQUESA,
+			apellido + ", " + nombre + " (" + str(edad) + " años)",
+			desc, ico_al, TURQUESA,
 			func(c: PanelContainer):
 				_animar_click(c, func():
 					if es_estadisticas:
@@ -346,14 +366,58 @@ func _construir_vista_alumnos():
 				)
 		)
 		vbox_tarjetas.add_child(card)
-		entradas.append({"card": card, "key": _normalizar(apellido + " " + nombre)})
+		entradas.append({
+			"card":     card,
+			"key":      _normalizar(apellido + " " + nombre),
+			"edad":     edad,
+			"aciertos": aciertos_n,
+		})
 
-	search.text_changed.connect(func(texto: String):
-		var q := _normalizar(texto.strip_edges())
-		for e in entradas:
-			e["card"].visible = q.is_empty() or e["key"].contains(q)
+	# --- Lógica de filtros combinados ---
+	var aplicar = func():
+		var q = _normalizar(search.text.strip_edges())
+
+		if estado["orden_aciertos"]:
+			entradas.sort_custom(func(a, b): return a["aciertos"] > b["aciertos"])
+		else:
+			entradas.sort_custom(func(a, b): return a["key"] < b["key"])
+
+		for i in range(entradas.size()):
+			var e = entradas[i]
+			var mostrar = true
+			if not q.is_empty() and not e["key"].contains(q):
+				mostrar = false
+			if estado["edad"] >= 0 and e["edad"] != estado["edad"]:
+				mostrar = false
+			e["card"].visible = mostrar
+			vbox_tarjetas.move_child(e["card"], i)
 		vbox_tarjetas.queue_sort()
+
+	search.text_changed.connect(func(_t): aplicar.call())
+
+	for par in chips_edad:
+		var chip = par["chip"]; var edad_val = par["val"]
+		chip.gui_input.connect(func(ev: InputEvent, _c = chip, _v = edad_val):
+			if (ev is InputEventMouseButton and ev.pressed and ev.button_index == MOUSE_BUTTON_LEFT) \
+			or (ev is InputEventScreenTouch and ev.pressed):
+				estado["edad"] = _v
+				for p in chips_edad: _chip_set_activo(p["chip"], false)
+				_chip_set_activo(_c, true)
+				aplicar.call()
+		)
+
+	btn_sort.gui_input.connect(func(ev: InputEvent):
+		if (ev is InputEventMouseButton and ev.pressed and ev.button_index == MOUSE_BUTTON_LEFT) \
+		or (ev is InputEventScreenTouch and ev.pressed):
+			estado["orden_aciertos"] = not estado["orden_aciertos"]
+			_chip_set_activo(btn_sort, estado["orden_aciertos"])
+			var lbl_s = btn_sort.get_child(0).get_child(0) as Label
+			if lbl_s: lbl_s.text = "⭐ Aciertos" if estado["orden_aciertos"] else "A-Z ↕"
+			aplicar.call()
 	)
+
+	_chip_set_activo(chips_edad[0]["chip"], true)
+	aplicar.call()
 
 func _iniciar_sesion_y_abrir_actividades(alumno: Dictionary):
 	var http = HTTPRequest.new()
@@ -725,6 +789,37 @@ func _crear_item_historial(titulo: String, subtitulo: String) -> PanelContainer:
 	vbox.add_child(_crear_label(subtitulo, 15, Color(0.88, 0.92, 1.0), false))
 	return card
 
+func _crear_chip_filtro(texto: String) -> PanelContainer:
+	var c = PanelContainer.new()
+	c.mouse_filter = Control.MOUSE_FILTER_STOP
+	var cc = CenterContainer.new()
+	c.add_child(cc)
+	var lbl = _crear_label(texto, 15, NAVY, false)
+	lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	cc.add_child(lbl)
+	_chip_set_activo(c, false)
+	return c
+
+func _chip_set_activo(c: PanelContainer, activo: bool) -> void:
+	var sf = StyleBoxFlat.new()
+	if activo:
+		sf.bg_color    = TURQUESA
+		sf.border_color = Color(0.04, 0.50, 0.54)
+	else:
+		sf.bg_color    = Color(0.86, 0.89, 0.94)
+		sf.border_color = Color(0.60, 0.65, 0.75)
+	sf.set_corner_radius_all(14)
+	sf.border_width_bottom    = 3
+	sf.content_margin_left    = 14; sf.content_margin_right  = 14
+	sf.content_margin_top     = 6;  sf.content_margin_bottom = 8
+	c.add_theme_stylebox_override("panel", sf)
+	if c.get_child_count() > 0:
+		var cc = c.get_child(0)
+		if is_instance_valid(cc) and cc.get_child_count() > 0:
+			var lbl = cc.get_child(0) as Label
+			if lbl:
+				lbl.add_theme_color_override("font_color", Color.WHITE if activo else NAVY)
+
 func _crear_input(placeholder: String, es_password: bool) -> LineEdit:
 	var inp = LineEdit.new()
 	inp.placeholder_text    = placeholder
@@ -732,6 +827,11 @@ func _crear_input(placeholder: String, es_password: bool) -> LineEdit:
 	inp.custom_minimum_size = Vector2(400, 48)
 	inp.alignment           = HORIZONTAL_ALIGNMENT_CENTER
 	inp.add_theme_font_size_override("font_size", 20)
+	# El proyecto tiene Kenney Future como fuente global (all-caps).
+	# Forzamos SystemFont en los inputs para que el profesor distinga mayúsculas de minúsculas.
+	var sys_font = SystemFont.new()
+	sys_font.font_names = PackedStringArray(["Segoe UI", "Arial", "Helvetica Neue", "DejaVu Sans"])
+	inp.add_theme_font_override("font", sys_font)
 	inp.add_theme_color_override("font_color", NAVY)
 	inp.add_theme_color_override("font_placeholder_color", Color(0.45, 0.52, 0.62))
 
