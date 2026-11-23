@@ -113,8 +113,9 @@ func _crear_header_banner(titulo: String, _vp_w: float) -> Control:
 		banner_wrap.add_child(np)
 
 	var lbl = _crear_label(titulo, 46, Color.WHITE, true)
-	lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	lbl.vertical_alignment   = VERTICAL_ALIGNMENT_CENTER
+	lbl.horizontal_alignment  = HORIZONTAL_ALIGNMENT_CENTER
+	lbl.vertical_alignment    = VERTICAL_ALIGNMENT_CENTER
+	lbl.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
 	lbl.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	lbl.offset_right  = -50
 	lbl.mouse_filter  = Control.MOUSE_FILTER_IGNORE
