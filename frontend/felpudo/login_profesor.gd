@@ -805,6 +805,7 @@ func _mostrar_alerta_amigable(titulo: String, mensaje: String):
 	if is_instance_valid(_lbl_alerta_mensaje):
 		_lbl_alerta_mensaje.text = mensaje
 	if is_instance_valid(_modal_alerta):
+		_modal_alerta.move_to_front()
 		_modal_alerta.visible = true
 
 # ---------------------------------------------------------------------------
