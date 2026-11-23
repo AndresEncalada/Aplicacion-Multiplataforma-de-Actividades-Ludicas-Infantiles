@@ -315,21 +315,40 @@ func _construir_vista_alumnos():
 		get_tree().change_scene_to_file("res://menu_principal.tscn")
 	)
 
+	var vbox_outer = VBoxContainer.new()
+	vbox_outer.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	vbox_outer.size_flags_vertical   = Control.SIZE_EXPAND_FILL
+	vbox_outer.add_theme_constant_override("separation", 10)
+	panel_pc.add_child(vbox_outer)
+
+	var search := _crear_input("Buscar alumno...", false)
+	search.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	vbox_outer.add_child(search)
+
 	var scroll = ScrollContainer.new()
 	scroll.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	scroll.size_flags_vertical   = Control.SIZE_EXPAND_FILL
-	panel_pc.add_child(scroll)
+	vbox_outer.add_child(scroll)
 
 	var vbox_tarjetas = VBoxContainer.new()
 	vbox_tarjetas.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	vbox_tarjetas.size_flags_vertical   = Control.SIZE_EXPAND_FILL
 	vbox_tarjetas.alignment = BoxContainer.ALIGNMENT_CENTER
 	vbox_tarjetas.add_theme_constant_override("separation", 20)
 	scroll.add_child(vbox_tarjetas)
 
-	for al in SesionState.alumnos:
-		var nombre_completo := str(al.get("nombre", "")) + " " + str(al.get("apellido", ""))
-		var edad := str(al.get("edad", 4))
+	var alumnos_ordenados: Array = SesionState.alumnos.duplicate()
+	alumnos_ordenados.sort_custom(func(a, b):
+		var ka := (str(a.get("apellido", "")) + str(a.get("nombre", ""))).to_lower()
+		var kb := (str(b.get("apellido", "")) + str(b.get("nombre", ""))).to_lower()
+		return ka < kb
+	)
+
+	var entradas: Array = []
+
+	for al in alumnos_ordenados:
+		var nombre   := str(al.get("nombre", ""))
+		var apellido := str(al.get("apellido", ""))
+		var edad     := str(al.get("edad", 4))
 		var stats: Dictionary = al.get("estadisticas", {})
 		var intentos_n := int(stats.get("total_intentos", 0))
 		var aciertos_n := int(stats.get("total_aciertos", 0))
@@ -344,19 +363,27 @@ func _construir_vista_alumnos():
 			desc = "Edad: " + edad + " años  —  Toca para elegir la actividad"
 
 		var ico_al := ICO_ALUMNO_OPT if ResourceLoader.exists(ICO_ALUMNO_OPT) else ICO_CUERPO
-		vbox_tarjetas.add_child(_crear_tarjeta_horizontal(
-			nombre_completo + " (" + edad + " años)",
+		var card := _crear_tarjeta_horizontal(
+			apellido + ", " + nombre + " (" + edad + " años)",
 			desc,
 			ico_al,
 			TURQUESA,
-			func(card: PanelContainer):
-				_animar_click(card, func():
+			func(c: PanelContainer):
+				_animar_click(c, func():
 					if es_estadisticas:
 						_abrir_estadisticas_alumno(int(al.get("id", 1)))
 					else:
 						_iniciar_sesion_y_abrir_actividades(al)
 				)
-		))
+		)
+		vbox_tarjetas.add_child(card)
+		entradas.append({"card": card, "key": (apellido + nombre).to_lower()})
+
+	search.text_changed.connect(func(texto: String):
+		var q := texto.to_lower().strip_edges()
+		for e in entradas:
+			e["card"].visible = q.is_empty() or e["key"].contains(q)
+	)
 
 func _iniciar_sesion_y_abrir_actividades(alumno: Dictionary):
 	var http = HTTPRequest.new()
