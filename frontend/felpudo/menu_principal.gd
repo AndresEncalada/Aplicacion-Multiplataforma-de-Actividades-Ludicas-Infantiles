@@ -1,60 +1,21 @@
-extends Control
+extends "res://base_ui.gd"
 
-const MANDARINA := Color(1.00, 0.50, 0.08)
-const TURQUESA  := Color(0.05, 0.68, 0.72)
-const CREMA     := Color(1.00, 0.96, 0.86)
-const AMBAR     := Color(0.98, 0.82, 0.08)
-const NAVY      := Color(0.08, 0.18, 0.38)
-
-const FONT_KFN      := "res://assets/fuente/Kenney Future Narrow.ttf"
-const SND_CLICK     := "res://assets/sonidos/click.ogg"
-const SND_CERRAR    := "res://assets/sonidos/cerrar.ogg"
 const ICO_CHECK     := "res://assets/iconos/check.svg"
-const ICO_PANEL     := "res://assets/iconos/panel.svg"
-const ICO_BANNER    := "res://assets/iconos/banner.svg"
-const ICO_BEAR      := "res://assets/iconos/bear.png"
-const ICO_BOTON     := "res://assets/iconos/boton.svg"
-const ICO_X         := "res://assets/iconos/x.svg"
 const ICO_CHK_VERDE := "res://assets/iconos/check_verde.svg"
 const ICO_CHK_MEDIO := "res://assets/iconos/check_medio.svg"
 const ICO_CHK_GRIS  := "res://assets/iconos/check_gris.svg"
 const ICO_REPORTE_OPT := "res://assets/iconos/reporte.png"
 const ICO_PREGUNTAS   := "res://assets/iconos/preguntas.png"
+const ICO_BEAR        := "res://assets/iconos/bear.png"
 
-const BANNER_H : int = 135
-const OVERLAP  : int = 67  # 50 % de BANNER_H
-
-var _font: FontFile
-var _btn_bloqueado := false
-var _sfx_click: AudioStreamPlayer
-var _sfx_cerrar: AudioStreamPlayer
-var _wobble_index: int = 0
-# {"node": Control, "tween": Tween, "type": "wobble"|"jiggle", "phase": float, "speed": float, "angle": float}
-var _wobble_data: Array = []
 var _check_anim_btn: TextureButton
 
 func _ready():
-	_font = load(FONT_KFN)
-	_sfx_click = AudioStreamPlayer.new()
-	var snd = load(SND_CLICK)
-	if snd:
-		_sfx_click.stream    = snd
-		_sfx_click.volume_db = -6.0
-	add_child(_sfx_click)
-
-	_sfx_cerrar = AudioStreamPlayer.new()
-	var snd_c = load(SND_CERRAR)
-	if snd_c:
-		_sfx_cerrar.stream    = snd_c
-		_sfx_cerrar.volume_db = -6.0
-	add_child(_sfx_cerrar)
-
+	super._ready()
 	_construir_ui()
-	if has_node("/root/AnimManager"):
-		AnimManager.changed.connect(_on_anim_changed)
 
 # ---------------------------------------------------------------------------
-# Interfaz principal (mismas proporciones originales)
+# Interfaz principal
 # ---------------------------------------------------------------------------
 
 func _construir_ui():
@@ -74,14 +35,12 @@ func _construir_ui():
 	root_vbox.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	add_child(root_vbox)
 
-	# Controles en esquinas superiores (no interfieren con el banner central)
 	add_child(_crear_toggle_animaciones())
 	add_child(_crear_boton_cerrar_sesion())
 
-	# Stack: separación negativa → panel sube OVERLAP px bajo el banner
 	var stack = VBoxContainer.new()
 	stack.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	stack.size_flags_vertical   = Control.SIZE_EXPAND_FILL  # llena el viewport
+	stack.size_flags_vertical   = Control.SIZE_EXPAND_FILL
 	stack.add_theme_constant_override("separation", -OVERLAP)
 	root_vbox.add_child(stack)
 
@@ -89,7 +48,7 @@ func _construir_ui():
 	stack.add_child(_crear_panel_con_tarjetas(mg, vp_h))
 
 # ---------------------------------------------------------------------------
-# Botón X superior derecho (cierra sesión docente y vuelve al login)
+# Botón X superior derecho (cierra sesión docente)
 # ---------------------------------------------------------------------------
 
 func _crear_boton_cerrar_sesion() -> Control:
@@ -182,7 +141,7 @@ func _on_toggle_animaciones():
 		get_tree().create_timer(0.4).timeout.connect(func(): _btn_bloqueado = false)
 
 # ---------------------------------------------------------------------------
-# Fila 1: banner centrado con título + oso
+# Header: banner centrado con título + oso
 # ---------------------------------------------------------------------------
 
 func _crear_header_con_oso(titulo: String, vp_w: float) -> Control:
@@ -233,7 +192,7 @@ func _crear_header_con_oso(titulo: String, vp_w: float) -> Control:
 	return row
 
 # ---------------------------------------------------------------------------
-# Fila 2: panel.svg de fondo + 2 botones: Actividades y Estadísticas Alumnos
+# Panel con 2 botones: Actividades y Estadísticas Alumnos
 # ---------------------------------------------------------------------------
 
 func _crear_panel_con_tarjetas(mg: int, vp_h: float) -> Control:
@@ -273,7 +232,6 @@ func _crear_panel_con_tarjetas(mg: int, vp_h: float) -> Control:
 	hbox.add_theme_constant_override("separation", 48)
 	center_inner.add_child(hbox)
 
-	# Botón 1: Actividades (selecciona alumno -> elige actividad)
 	hbox.add_child(_crear_tarjeta(
 		"Actividades",
 		"res://assets/iconos/actividades.png",
@@ -284,7 +242,6 @@ func _crear_panel_con_tarjetas(mg: int, vp_h: float) -> Control:
 			_ir_a(card, "res://login_profesor.tscn")
 	))
 
-	# Botón 2: Estadísticas Alumnos (selecciona alumno -> ve estadísticas y reporte)
 	var ico_est := ICO_REPORTE_OPT if ResourceLoader.exists(ICO_REPORTE_OPT) else ICO_PREGUNTAS
 	hbox.add_child(_crear_tarjeta(
 		"Estadísticas\nAlumnos",
@@ -298,10 +255,6 @@ func _crear_panel_con_tarjetas(mg: int, vp_h: float) -> Control:
 
 	return margin_outer
 
-# ---------------------------------------------------------------------------
-# Tarjeta con boton.svg
-# ---------------------------------------------------------------------------
-
 func _crear_tarjeta(nombre: String, icono: String, acento: Color, accion: Callable) -> PanelContainer:
 	var card = PanelContainer.new()
 	card.custom_minimum_size = Vector2(220, 200)
@@ -312,7 +265,7 @@ func _crear_tarjeta(nombre: String, icono: String, acento: Color, accion: Callab
 	if tex_btn:
 		var style = StyleBoxTexture.new()
 		style.texture = tex_btn
-		_aplicar_margenes_boton(style, tex_btn)
+		_aplicar_margenes_boton(style, tex_btn, 22, 16)
 		card.add_theme_stylebox_override("panel", style)
 	else:
 		var sf = StyleBoxFlat.new()
@@ -352,7 +305,7 @@ func _crear_tarjeta(nombre: String, icono: String, acento: Color, accion: Callab
 	return card
 
 # ---------------------------------------------------------------------------
-# Animaciones
+# Animación de click y navegación
 # ---------------------------------------------------------------------------
 
 func _ir_a(card: PanelContainer, escena: String):
@@ -368,95 +321,3 @@ func _ir_a(card: PanelContainer, escena: String):
 	tw.tween_property(card, "scale", Vector2(0.92, 0.92), 0.08).set_trans(Tween.TRANS_QUART)
 	tw.tween_property(card, "scale", Vector2(1.0, 1.0),   0.18).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
 	tw.tween_callback(func(): get_tree().change_scene_to_file(escena))
-
-func _iniciar_wobble(node: Control) -> void:
-	var idx := _wobble_index
-	_wobble_index += 1
-	var phase: float = idx * 0.41
-	var speed: float = 0.75 + idx * 0.105
-	var angle: float = 0.24
-	await get_tree().process_frame
-	if not is_instance_valid(node): return
-	node.pivot_offset = node.size / 2.0
-	var tw = create_tween().set_loops()
-	if phase > 0.0: tw.tween_interval(phase)
-	tw.tween_property(node, "rotation_degrees",  angle, speed).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
-	tw.tween_property(node, "rotation_degrees", -angle, speed).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
-	_wobble_data.append({"node": node, "tween": tw, "type": "wobble", "phase": phase, "speed": speed, "angle": angle})
-	if has_node("/root/AnimManager") and not AnimManager.activas:
-		tw.pause(); node.rotation_degrees = 0.0
-
-func _iniciar_jiggle(node: Control) -> void:
-	node.pivot_offset = Vector2(node.custom_minimum_size.x / 2.0, node.custom_minimum_size.y)
-	var tw = create_tween().set_loops()
-	tw.tween_property(node, "rotation_degrees",  5.0, 0.14).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
-	tw.tween_property(node, "rotation_degrees", -5.0, 0.16).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
-	tw.tween_property(node, "rotation_degrees",  2.5, 0.10).set_trans(Tween.TRANS_SINE)
-	tw.tween_property(node, "rotation_degrees",  0.0, 0.12).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN)
-	tw.tween_interval(2.5)
-	_wobble_data.append({"node": node, "tween": tw, "type": "jiggle", "phase": 0.0, "speed": 0.0, "angle": 0.0})
-	if has_node("/root/AnimManager") and not AnimManager.activas:
-		tw.pause(); node.rotation_degrees = 0.0
-
-func _on_anim_changed(activo: bool):
-	if activo:
-		_recrear_wobbles()
-	else:
-		for d in _wobble_data:
-			if is_instance_valid(d["tween"]): d["tween"].pause()
-			if is_instance_valid(d["node"]): d["node"].rotation_degrees = 0.0
-
-func _recrear_wobbles():
-	for d in _wobble_data:
-		if not is_instance_valid(d["node"]): continue
-		if is_instance_valid(d["tween"]): d["tween"].kill()
-		var node: Control = d["node"]
-		node.rotation_degrees = 0.0
-		var tw = create_tween().set_loops()
-		d["tween"] = tw
-		if d["type"] == "wobble":
-			var phase: float = d["phase"]
-			if phase > 0.0: tw.tween_interval(phase)
-			tw.tween_property(node, "rotation_degrees",  d["angle"], d["speed"]).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
-			tw.tween_property(node, "rotation_degrees", -d["angle"], d["speed"]).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
-		elif d["type"] == "jiggle":
-			node.pivot_offset = Vector2(node.custom_minimum_size.x / 2.0, node.custom_minimum_size.y)
-			tw.tween_property(node, "rotation_degrees",  5.0, 0.14).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
-			tw.tween_property(node, "rotation_degrees", -5.0, 0.16).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
-			tw.tween_property(node, "rotation_degrees",  2.5, 0.10).set_trans(Tween.TRANS_SINE)
-			tw.tween_property(node, "rotation_degrees",  0.0, 0.12).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN)
-			tw.tween_interval(2.5)
-
-# ---------------------------------------------------------------------------
-# Helpers NinePatch (proporcionales)
-# ---------------------------------------------------------------------------
-
-func _aplicar_margenes_panel(s: StyleBoxTexture, tex: Texture2D):
-	var m: int = max(4, int(tex.get_width() * 0.156))
-	s.texture_margin_left   = m; s.texture_margin_right  = m
-	s.texture_margin_top    = m; s.texture_margin_bottom = m
-	var cm: int = m + 16
-	s.content_margin_left   = cm; s.content_margin_right  = cm
-	s.content_margin_top    = cm; s.content_margin_bottom = cm
-
-func _aplicar_margenes_boton(s: StyleBoxTexture, tex: Texture2D):
-	var m: int = max(6, int(tex.get_width() * 0.25))
-	s.texture_margin_left   = m; s.texture_margin_right  = m
-	s.texture_margin_top    = m; s.texture_margin_bottom = m
-	s.content_margin_left   = 22; s.content_margin_right  = 22
-	s.content_margin_top    = 16; s.content_margin_bottom = 16
-
-func _aplicar_margenes_banner(np: NinePatchRect, tex: Texture2D):
-	var w: int = tex.get_width(); var h: int = tex.get_height()
-	np.patch_margin_left   = max(4, int(w * 0.047))
-	np.patch_margin_right  = max(4, int(w * 0.047))
-	np.patch_margin_top    = max(4, int(h * 0.203))
-	np.patch_margin_bottom = max(4, int(h * 0.203))
-
-func _crear_label(texto: String, tam: int, color: Color, _negrita: bool) -> Label:
-	var lbl = Label.new()
-	lbl.text = texto
-	lbl.add_theme_font_size_override("font_size", tam)
-	lbl.add_theme_color_override("font_color", color)
-	if _font: lbl.add_theme_font_override("font", _font)
-	return lbl
