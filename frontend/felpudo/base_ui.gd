@@ -55,6 +55,11 @@ func _crear_sfx(ruta: String, vol: float) -> AudioStreamPlayer:
 # UI helpers
 # ---------------------------------------------------------------------------
 
+func _normalizar(s: String) -> String:
+	return s.to_lower()\
+		.replace("á","a").replace("é","e").replace("í","i").replace("ó","o").replace("ú","u")\
+		.replace("ñ","n").replace("ü","u")
+
 func _crear_label(texto: String, tam: int, color: Color, _negrita: bool) -> Label:
 	var lbl = Label.new()
 	lbl.text = texto

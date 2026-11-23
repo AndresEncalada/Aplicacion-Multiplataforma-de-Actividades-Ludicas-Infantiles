@@ -346,12 +346,13 @@ func _construir_vista_alumnos():
 				)
 		)
 		vbox_tarjetas.add_child(card)
-		entradas.append({"card": card, "key": (apellido + nombre).to_lower()})
+		entradas.append({"card": card, "key": _normalizar(apellido + " " + nombre)})
 
 	search.text_changed.connect(func(texto: String):
-		var q := texto.to_lower().strip_edges()
+		var q := _normalizar(texto.strip_edges())
 		for e in entradas:
 			e["card"].visible = q.is_empty() or e["key"].contains(q)
+		vbox_tarjetas.queue_sort()
 	)
 
 func _iniciar_sesion_y_abrir_actividades(alumno: Dictionary):

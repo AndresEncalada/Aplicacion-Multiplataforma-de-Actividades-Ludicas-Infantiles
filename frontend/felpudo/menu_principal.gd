@@ -9,10 +9,12 @@ const ICO_PREGUNTAS   := "res://assets/iconos/preguntas.png"
 const ICO_BEAR        := "res://assets/iconos/bear.png"
 
 var _check_anim_btn: TextureButton
+var _modal_confirmar_cerrar: ColorRect
 
 func _ready():
 	super._ready()
 	_construir_ui()
+	_construir_modal_confirmar()
 
 # ---------------------------------------------------------------------------
 # Interfaz principal
@@ -75,11 +77,10 @@ func _crear_boton_cerrar_sesion() -> Control:
 
 	btn_x.pressed.connect(func():
 		if _btn_bloqueado: return
-		_btn_bloqueado = true
-		if _sfx_cerrar: _sfx_cerrar.play()
-		if has_node("/root/SesionState"):
-			SesionState.cerrar_sesion_profesor()
-		get_tree().change_scene_to_file("res://login_profesor.tscn")
+		if _sfx_click: _sfx_click.play()
+		if is_instance_valid(_modal_confirmar_cerrar):
+			_modal_confirmar_cerrar.move_to_front()
+			_modal_confirmar_cerrar.visible = true
 	)
 	return btn_x
 
@@ -321,3 +322,91 @@ func _ir_a(card: PanelContainer, escena: String):
 	tw.tween_property(card, "scale", Vector2(0.92, 0.92), 0.08).set_trans(Tween.TRANS_QUART)
 	tw.tween_property(card, "scale", Vector2(1.0, 1.0),   0.18).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
 	tw.tween_callback(func(): get_tree().change_scene_to_file(escena))
+
+# ---------------------------------------------------------------------------
+# Modal de confirmación: cerrar sesión
+# ---------------------------------------------------------------------------
+
+func _construir_modal_confirmar():
+	_modal_confirmar_cerrar = ColorRect.new()
+	_modal_confirmar_cerrar.color   = Color(0.04, 0.08, 0.20, 0.82)
+	_modal_confirmar_cerrar.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	_modal_confirmar_cerrar.visible = false
+	_modal_confirmar_cerrar.z_index = 50
+	add_child(_modal_confirmar_cerrar)
+
+	var cc = CenterContainer.new()
+	cc.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	_modal_confirmar_cerrar.add_child(cc)
+
+	var card = PanelContainer.new()
+	card.custom_minimum_size = Vector2(540, 220)
+	var tex_panel = load(ICO_PANEL) as Texture2D
+	if tex_panel:
+		var style = StyleBoxTexture.new()
+		style.texture = tex_panel
+		_aplicar_margenes_panel(style, tex_panel)
+		card.add_theme_stylebox_override("panel", style)
+	cc.add_child(card)
+
+	var vb = VBoxContainer.new()
+	vb.alignment = BoxContainer.ALIGNMENT_CENTER
+	vb.add_theme_constant_override("separation", 20)
+	card.add_child(vb)
+
+	var lbl_titulo = _crear_label("¿Cerrar sesión?", 28, NAVY, true)
+	lbl_titulo.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	vb.add_child(lbl_titulo)
+
+	var lbl_desc = _crear_label("Se cerrará la sesión del profesor.", 18, NAVY, false)
+	lbl_desc.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	vb.add_child(lbl_desc)
+
+	var hb = HBoxContainer.new()
+	hb.alignment = BoxContainer.ALIGNMENT_CENTER
+	hb.add_theme_constant_override("separation", 24)
+	vb.add_child(hb)
+
+	var btn_cancelar = _crear_boton_confirmar("Cancelar", TURQUESA, func():
+		_modal_confirmar_cerrar.visible = false
+	)
+	hb.add_child(btn_cancelar)
+
+	var btn_cerrar = _crear_boton_confirmar("Cerrar sesión", Color(0.91, 0.11, 0.21), func():
+		_modal_confirmar_cerrar.visible = false
+		if has_node("/root/SesionState"):
+			SesionState.cerrar_sesion_profesor()
+		get_tree().change_scene_to_file("res://login_profesor.tscn")
+	)
+	hb.add_child(btn_cerrar)
+
+
+func _crear_boton_confirmar(texto: String, color_fondo: Color, accion: Callable) -> PanelContainer:
+	var card = PanelContainer.new()
+	card.custom_minimum_size = Vector2(190, 60)
+	card.mouse_filter        = Control.MOUSE_FILTER_STOP
+
+	var sf = StyleBoxFlat.new()
+	sf.bg_color = color_fondo
+	sf.set_corner_radius_all(18)
+	sf.border_color = color_fondo.darkened(0.25)
+	sf.border_width_bottom = 5
+	sf.set_content_margin_all(12)
+	card.add_theme_stylebox_override("panel", sf)
+
+	var cc2 = CenterContainer.new()
+	card.add_child(cc2)
+	var lbl = _crear_label(texto, 20, Color.WHITE, true)
+	lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	cc2.add_child(lbl)
+
+	card.gui_input.connect(func(ev: InputEvent):
+		if ev is InputEventScreenTouch and ev.pressed:
+			if _sfx_click: _sfx_click.play()
+			accion.call()
+		elif ev is InputEventMouseButton and ev.pressed and ev.button_index == MOUSE_BUTTON_LEFT:
+			if _sfx_click: _sfx_click.play()
+			accion.call()
+	)
+	_iniciar_wobble(card)
+	return card
