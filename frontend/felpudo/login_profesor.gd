@@ -1,4 +1,4 @@
-extends Control
+extends "res://base_ui.gd"
 
 # ==============================================================================
 # GUÍA DE IMÁGENES / ASSETS PARA ESTA ESCENA (login_profesor.gd)
@@ -15,21 +15,8 @@ extends Control
 # 4. ICO_ALERTA_OPT   ("res://assets/iconos/alerta.png")   -> Respaldo: bear.png
 # ==============================================================================
 
-const MANDARINA := Color(1.00, 0.50, 0.08)
-const TURQUESA  := Color(0.05, 0.68, 0.72)
-const CREMA     := Color(1.00, 0.96, 0.86)
-const AMBAR     := Color(0.98, 0.82, 0.08)
-const NAVY      := Color(0.08, 0.18, 0.38)
+const SND_EXITO := "res://assets/sonidos/exito.ogg"
 
-const FONT_KFN   := "res://assets/fuente/Kenney Future Narrow.ttf"
-const SND_CLICK  := "res://assets/sonidos/click.ogg"
-const SND_EXITO  := "res://assets/sonidos/exito.ogg"
-const SND_CERRAR := "res://assets/sonidos/cerrar.ogg"
-
-const ICO_PANEL  := "res://assets/iconos/panel.svg"
-const ICO_BANNER := "res://assets/iconos/banner.svg"
-const ICO_BOTON  := "res://assets/iconos/boton.svg"
-const ICO_X      := "res://assets/iconos/x.svg"
 const ICO_BEAR   := "res://assets/iconos/bear.png"
 const ICO_CUERPO := "res://assets/iconos/cuerpo.png"
 const ICO_PREG   := "res://assets/iconos/preguntas.png"
@@ -39,62 +26,25 @@ const ICO_ALUMNO_OPT   := "res://assets/iconos/alumno.png"
 const ICO_REPORTE_OPT  := "res://assets/iconos/reporte.png"
 const ICO_ALERTA_OPT   := "res://assets/iconos/alerta.png"
 
-# Proporciones exactas de menu_principal.gd y menu_actividades.gd
-const BANNER_H: int = 135
-const OVERLAP:  int = 67   # 50 % de BANNER_H
-
-var _font: FontFile
-var _btn_bloqueado := false
-var _sfx_click: AudioStreamPlayer
 var _sfx_exito: AudioStreamPlayer
-var _sfx_cerrar: AudioStreamPlayer
-var _wobble_index: int = 0
-var _wobble_data: Array = []
-
 var _ui_root: Control
 var _input_user: LineEdit
 var _input_pass: LineEdit
 var _lbl_btn_login: Label
 
-# Modal de alertas amigables
 var _modal_alerta: ColorRect
 var _lbl_alerta_titulo: Label
 var _lbl_alerta_mensaje: Label
 
 func _ready():
-	_font = load(FONT_KFN)
-	_sfx_click  = _crear_sfx(SND_CLICK, -6.0)
-	_sfx_exito  = _crear_sfx(SND_EXITO, -4.0)
-	_sfx_cerrar = _crear_sfx(SND_CERRAR, -6.0)
-
-	var bg = ColorRect.new()
-	bg.color = NAVY
-	bg.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	bg.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	add_child(bg)
-
-	_ui_root = Control.new()
-	_ui_root.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	add_child(_ui_root)
-
+	super._ready()
+	_sfx_exito = _crear_sfx(SND_EXITO, -4.0)
 	_construir_modal_alerta()
-
-	if has_node("/root/AnimManager"):
-		AnimManager.changed.connect(_on_anim_changed)
 
 	if has_node("/root/SesionState") and SesionState.esta_autenticado():
 		_solicitar_alumnos_actualizados()
 	else:
 		_construir_vista_login()
-
-func _crear_sfx(ruta: String, vol: float) -> AudioStreamPlayer:
-	var p = AudioStreamPlayer.new()
-	var s = load(ruta)
-	if s:
-		p.stream    = s
-		p.volume_db = vol
-	add_child(p)
-	return p
 
 func _cargar_icono_con_fallback(ruta_opcional: String, ruta_respaldo: String) -> Texture2D:
 	if ResourceLoader.exists(ruta_opcional):
@@ -114,7 +64,7 @@ func _limpiar_ui_root():
 		child.queue_free()
 
 # ---------------------------------------------------------------------------
-# Armazón base idéntico a menu_principal.gd / menu_actividades.gd
+# Armazón base de panel
 # ---------------------------------------------------------------------------
 
 func _crear_panel_base(con_oso: bool, titulo_banner: String, accion_cerrar: Callable) -> PanelContainer:
@@ -176,10 +126,20 @@ func _crear_panel_base(con_oso: bool, titulo_banner: String, accion_cerrar: Call
 	return panel_pc
 
 # ---------------------------------------------------------------------------
-# VISTA 1: Login del Profesor (proporciones idénticas a menu_principal.gd)
+# VISTA 1: Login del Profesor
 # ---------------------------------------------------------------------------
 
 func _construir_vista_login():
+	var bg = ColorRect.new()
+	bg.color = NAVY
+	bg.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	bg.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	add_child(bg)
+
+	_ui_root = Control.new()
+	_ui_root.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	add_child(_ui_root)
+
 	var panel_pc := _crear_panel_base(true, "Felpudo", Callable())
 
 	var center_inner = CenterContainer.new()
@@ -273,14 +233,23 @@ func _on_login_response(result: int, response_code: int, _headers: PackedStringA
 			data.get("alumnos", [])
 		)
 
-	# Al iniciar sesión va directo a la ventana con los 2 botones (Actividades y Estadísticas Alumnos)
 	get_tree().change_scene_to_file("res://menu_principal.tscn")
 
 # ---------------------------------------------------------------------------
-# VISTA 2: Selección de Alumno (proporciones idénticas a menu_actividades.gd)
+# VISTA 2: Selección de Alumno
 # ---------------------------------------------------------------------------
 
 func _solicitar_alumnos_actualizados():
+	if not is_instance_valid(_ui_root):
+		var bg = ColorRect.new()
+		bg.color = NAVY
+		bg.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+		bg.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		add_child(bg)
+		_ui_root = Control.new()
+		_ui_root.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+		add_child(_ui_root)
+
 	var http = HTTPRequest.new()
 	add_child(http)
 	http.request_completed.connect(func(result: int, code: int, _h: PackedStringArray, body: PackedByteArray):
@@ -315,21 +284,137 @@ func _construir_vista_alumnos():
 		get_tree().change_scene_to_file("res://menu_principal.tscn")
 	)
 
+	var vbox_outer = VBoxContainer.new()
+	vbox_outer.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	vbox_outer.size_flags_vertical   = Control.SIZE_EXPAND_FILL
+	vbox_outer.add_theme_constant_override("separation", 8)
+	panel_pc.add_child(vbox_outer)
+
+	# --- Barra de búsqueda ---
+	var search := _crear_input("Buscar alumno...", false)
+	search.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	vbox_outer.add_child(search)
+
+	# --- Barra de filtros ---
+	var _vp_f := get_viewport().get_visible_rect().size
+	var compacto: bool = _vp_f.x < 1280 or _vp_f.y < 720
+	var chip_h: int   = 52 if compacto else 38
+	var lbl_sz: int   = 14 if compacto else 13
+
+	var filtros_panel = PanelContainer.new()
+	filtros_panel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	var sf_fp = StyleBoxFlat.new()
+	sf_fp.bg_color = Color(0.89, 0.91, 0.96)
+	sf_fp.set_corner_radius_all(18)
+	sf_fp.content_margin_left   = 14; sf_fp.content_margin_right  = 14
+	sf_fp.content_margin_top    = 10; sf_fp.content_margin_bottom = 10
+	filtros_panel.add_theme_stylebox_override("panel", sf_fp)
+	vbox_outer.add_child(filtros_panel)
+
+	# En pantallas pequeñas: dos filas (Edad arriba, Ordenar abajo).
+	# En pantallas grandes: una sola fila horizontal.
+	var filtros_root: BoxContainer
+	if compacto:
+		var vb = VBoxContainer.new()
+		vb.add_theme_constant_override("separation", 8)
+		filtros_root = vb
+	else:
+		var hb = HBoxContainer.new()
+		hb.add_theme_constant_override("separation", 10)
+		filtros_root = hb
+	filtros_panel.add_child(filtros_root)
+
+	var estado = {"edad": -1, "orden_aciertos": false}
+
+	# -- Grupo Edad --
+	var grp_edad = HBoxContainer.new()
+	grp_edad.add_theme_constant_override("separation", 6)
+	grp_edad.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	filtros_root.add_child(grp_edad)
+
+	var lbl_edad_cat = _crear_label("Edad:", lbl_sz, Color(0.38, 0.44, 0.58), false)
+	lbl_edad_cat.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	grp_edad.add_child(lbl_edad_cat)
+
+	var edad_scroll = ScrollContainer.new()
+	edad_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_AUTO
+	edad_scroll.vertical_scroll_mode   = ScrollContainer.SCROLL_MODE_DISABLED
+	edad_scroll.size_flags_horizontal  = Control.SIZE_EXPAND_FILL
+	edad_scroll.custom_minimum_size    = Vector2(0, chip_h + 8)
+	grp_edad.add_child(edad_scroll)
+
+	var chips_hbox = HBoxContainer.new()
+	chips_hbox.add_theme_constant_override("separation", 6)
+	edad_scroll.add_child(chips_hbox)
+
+	var edades_unicas: Array = []
+	for al in SesionState.alumnos:
+		var e := int(al.get("edad", 0))
+		if e > 0 and not edades_unicas.has(e):
+			edades_unicas.append(e)
+	edades_unicas.sort()
+
+	var chips_edad: Array = []
+	var chip_todos = _crear_chip_filtro("Todos", chip_h)
+	chips_hbox.add_child(chip_todos)
+	chips_edad.append({"chip": chip_todos, "val": -1})
+
+	for e_val in edades_unicas:
+		var chip = _crear_chip_filtro(str(e_val) + " a", chip_h)
+		chips_hbox.add_child(chip)
+		chips_edad.append({"chip": chip, "val": e_val})
+
+	# En modo horizontal añadir separador vertical entre grupos
+	if not compacto:
+		var sep = VSeparator.new()
+		sep.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+		sep.custom_minimum_size = Vector2(1, 28)
+		filtros_root.add_child(sep)
+	else:
+		# En modo compacto, una línea horizontal fina separa las filas
+		var hsep = HSeparator.new()
+		hsep.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		filtros_root.add_child(hsep)
+
+	# -- Grupo Ordenar --
+	var grp_ord = HBoxContainer.new()
+	grp_ord.add_theme_constant_override("separation", 6)
+	grp_ord.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	filtros_root.add_child(grp_ord)
+
+	var lbl_ord = _crear_label("Ordenar:", lbl_sz, Color(0.38, 0.44, 0.58), false)
+	lbl_ord.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	grp_ord.add_child(lbl_ord)
+
+	var chip_az       = _crear_chip_filtro("A-Z", chip_h)
+	var chip_aciertos = _crear_chip_filtro("★ Aciertos", chip_h)
+	grp_ord.add_child(chip_az)
+	grp_ord.add_child(chip_aciertos)
+
+	# --- Lista de tarjetas ---
 	var scroll = ScrollContainer.new()
 	scroll.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	scroll.size_flags_vertical   = Control.SIZE_EXPAND_FILL
-	panel_pc.add_child(scroll)
+	vbox_outer.add_child(scroll)
 
 	var vbox_tarjetas = VBoxContainer.new()
 	vbox_tarjetas.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	vbox_tarjetas.size_flags_vertical   = Control.SIZE_EXPAND_FILL
 	vbox_tarjetas.alignment = BoxContainer.ALIGNMENT_CENTER
 	vbox_tarjetas.add_theme_constant_override("separation", 20)
 	scroll.add_child(vbox_tarjetas)
 
-	for al in SesionState.alumnos:
-		var nombre_completo := str(al.get("nombre", "")) + " " + str(al.get("apellido", ""))
-		var edad := str(al.get("edad", 4))
+	var alumnos_base: Array = SesionState.alumnos.duplicate()
+	alumnos_base.sort_custom(func(a, b):
+		return _normalizar(str(a.get("apellido","")) + str(a.get("nombre",""))) < \
+		       _normalizar(str(b.get("apellido","")) + str(b.get("nombre","")))
+	)
+
+	var entradas: Array = []
+
+	for al in alumnos_base:
+		var nombre   := str(al.get("nombre", ""))
+		var apellido := str(al.get("apellido", ""))
+		var edad     := int(al.get("edad", 4))
 		var stats: Dictionary = al.get("estadisticas", {})
 		var intentos_n := int(stats.get("total_intentos", 0))
 		var aciertos_n := int(stats.get("total_aciertos", 0))
@@ -339,24 +424,87 @@ func _construir_vista_alumnos():
 
 		var desc: String
 		if es_estadisticas:
-			desc = "Intentos: " + str(intentos_n) + "  |  Aciertos: " + str(aciertos_n) + "  |  Fallos: " + str(fallos_n) + "  |  Mejora: " + signo + str(mejora_pct) + "%"
+			desc = "Intentos: " + str(intentos_n) + "  |  Aciertos: " + str(aciertos_n) + \
+			       "  |  Fallos: " + str(fallos_n) + "  |  Mejora: " + signo + ("%.1f" % mejora_pct) + "%"
 		else:
-			desc = "Edad: " + edad + " años  —  Toca para elegir la actividad"
+			desc = "Edad: " + str(edad) + " años  —  Toca para elegir la actividad"
 
 		var ico_al := ICO_ALUMNO_OPT if ResourceLoader.exists(ICO_ALUMNO_OPT) else ICO_CUERPO
-		vbox_tarjetas.add_child(_crear_tarjeta_horizontal(
-			nombre_completo + " (" + edad + " años)",
-			desc,
-			ico_al,
-			TURQUESA,
-			func(card: PanelContainer):
-				_animar_click(card, func():
+		var card := _crear_tarjeta_horizontal(
+			apellido + ", " + nombre + " (" + str(edad) + " años)",
+			desc, ico_al, TURQUESA,
+			func(c: PanelContainer):
+				_animar_click(c, func():
 					if es_estadisticas:
 						_abrir_estadisticas_alumno(int(al.get("id", 1)))
 					else:
 						_iniciar_sesion_y_abrir_actividades(al)
 				)
-		))
+		)
+		vbox_tarjetas.add_child(card)
+		entradas.append({
+			"card":     card,
+			"key":      _normalizar(apellido + " " + nombre),
+			"edad":     edad,
+			"aciertos": aciertos_n,
+		})
+
+	# --- Lógica de filtros combinados ---
+	var aplicar = func():
+		var q = _normalizar(search.text.strip_edges())
+
+		if estado["orden_aciertos"]:
+			entradas.sort_custom(func(a, b): return a["aciertos"] > b["aciertos"])
+		else:
+			entradas.sort_custom(func(a, b): return a["key"] < b["key"])
+
+		for i in range(entradas.size()):
+			var e = entradas[i]
+			var mostrar = true
+			if not q.is_empty() and not e["key"].contains(q):
+				mostrar = false
+			if estado["edad"] >= 0 and e["edad"] != estado["edad"]:
+				mostrar = false
+			e["card"].visible = mostrar
+			vbox_tarjetas.move_child(e["card"], i)
+		vbox_tarjetas.queue_sort()
+
+	search.text_changed.connect(func(_t): aplicar.call())
+
+	for par in chips_edad:
+		var chip = par["chip"]; var edad_val = par["val"]
+		chip.gui_input.connect(func(ev: InputEvent, _c = chip, _v = edad_val):
+			if (ev is InputEventMouseButton and ev.pressed and ev.button_index == MOUSE_BUTTON_LEFT) \
+			or (ev is InputEventScreenTouch and ev.pressed):
+				estado["edad"] = _v
+				for p in chips_edad: _chip_set_activo(p["chip"], false)
+				_chip_set_activo(_c, true)
+				aplicar.call()
+		)
+
+	# Chips de orden: radio-button (uno siempre activo, se excluyen mutuamente)
+	chip_az.gui_input.connect(func(ev: InputEvent):
+		if (ev is InputEventMouseButton and ev.pressed and ev.button_index == MOUSE_BUTTON_LEFT) \
+		or (ev is InputEventScreenTouch and ev.pressed):
+			estado["orden_aciertos"] = false
+			_chip_set_activo(chip_az,       true)
+			_chip_set_activo(chip_aciertos, false)
+			aplicar.call()
+	)
+	chip_aciertos.gui_input.connect(func(ev: InputEvent):
+		if (ev is InputEventMouseButton and ev.pressed and ev.button_index == MOUSE_BUTTON_LEFT) \
+		or (ev is InputEventScreenTouch and ev.pressed):
+			estado["orden_aciertos"] = true
+			_chip_set_activo(chip_az,       false)
+			_chip_set_activo(chip_aciertos, true,
+				Color(1.00, 0.50, 0.08),
+				Color(0.65, 0.30, 0.03))
+			aplicar.call()
+	)
+
+	_chip_set_activo(chips_edad[0]["chip"], true)
+	_chip_set_activo(chip_az, true)
+	aplicar.call()
 
 func _iniciar_sesion_y_abrir_actividades(alumno: Dictionary):
 	var http = HTTPRequest.new()
@@ -393,7 +541,7 @@ func _iniciar_sesion_y_abrir_actividades(alumno: Dictionary):
 		)
 
 # ---------------------------------------------------------------------------
-# VISTA 3: Estadísticas del Alumno (proporciones idénticas a menu_actividades.gd)
+# VISTA 3: Estadísticas del Alumno
 # ---------------------------------------------------------------------------
 
 func _abrir_estadisticas_alumno(nn_id: int):
@@ -439,7 +587,6 @@ func _construir_vista_estadisticas(stats: Dictionary):
 	vbox.add_theme_constant_override("separation", 14)
 	panel_pc.add_child(vbox)
 
-	# Fila 1: Tarjetas de indicadores principales con boton.svg
 	var kpi_hbox = HBoxContainer.new()
 	kpi_hbox.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	kpi_hbox.add_theme_constant_override("separation", 14)
@@ -453,7 +600,6 @@ func _construir_vista_estadisticas(stats: Dictionary):
 	kpi_hbox.add_child(_crear_kpi_svg("Fallos", str(res.get("total_fallos", 0))))
 	kpi_hbox.add_child(_crear_kpi_svg("Mejora", signo + str(mejora_val) + "%"))
 
-	# Fila 2: Lista de actividades y sesiones con scroll
 	var scroll = ScrollContainer.new()
 	scroll.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	scroll.size_flags_vertical   = Control.SIZE_EXPAND_FILL
@@ -479,7 +625,6 @@ func _construir_vista_estadisticas(stats: Dictionary):
 				sub_txt
 			))
 
-	# Fila 3: Botón para abrir el reporte imprimible HTML / PDF
 	var center_btn = CenterContainer.new()
 	vbox.add_child(center_btn)
 
@@ -492,7 +637,7 @@ func _construir_vista_estadisticas(stats: Dictionary):
 	center_btn.add_child(btn_rep)
 
 # ---------------------------------------------------------------------------
-# Componentes visuales con las proporciones exactas del proyecto
+# Componentes visuales específicos de esta escena
 # ---------------------------------------------------------------------------
 
 func _crear_header_con_oso(titulo: String, vp_w: float) -> Control:
@@ -559,8 +704,9 @@ func _crear_header_banner(titulo: String, _vp_w: float, accion_cerrar: Callable)
 		banner_wrap.add_child(np)
 
 	var lbl = _crear_label(titulo, 44, Color.WHITE, true)
-	lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	lbl.vertical_alignment   = VERTICAL_ALIGNMENT_CENTER
+	lbl.horizontal_alignment  = HORIZONTAL_ALIGNMENT_CENTER
+	lbl.vertical_alignment    = VERTICAL_ALIGNMENT_CENTER
+	lbl.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
 	lbl.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	lbl.offset_right = -50
 	lbl.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -569,10 +715,10 @@ func _crear_header_banner(titulo: String, _vp_w: float, accion_cerrar: Callable)
 
 	var btn_x = _crear_btn_x()
 	btn_x.set_anchors_preset(Control.PRESET_CENTER_RIGHT)
-	btn_x.offset_left   = -73
-	btn_x.offset_top    = -32
+	btn_x.offset_left   = -106
+	btn_x.offset_top    = -48
 	btn_x.offset_right  = -10
-	btn_x.offset_bottom = 31
+	btn_x.offset_bottom = 48
 	btn_x.z_index = 5
 	btn_x.pressed.connect(func():
 		if _btn_bloqueado: return
@@ -730,6 +876,45 @@ func _crear_item_historial(titulo: String, subtitulo: String) -> PanelContainer:
 	vbox.add_child(_crear_label(subtitulo, 15, Color(0.88, 0.92, 1.0), false))
 	return card
 
+func _crear_chip_filtro(texto: String, alto: int = 38) -> PanelContainer:
+	var c = PanelContainer.new()
+	c.custom_minimum_size = Vector2(0, alto)
+	c.mouse_filter = Control.MOUSE_FILTER_STOP
+	var cc = CenterContainer.new()
+	c.add_child(cc)
+	var lbl = _crear_label(texto, 15, Color(0.25, 0.30, 0.42), false)
+	lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	cc.add_child(lbl)
+	_chip_set_activo(c, false)
+	return c
+
+# col_bg / col_borde opcionales para usar MANDARINA en el botón de orden
+func _chip_set_activo(c: PanelContainer, activo: bool,
+		col_bg:    Color = Color(0.05, 0.68, 0.72),
+		col_borde: Color = Color(0.03, 0.46, 0.49)) -> void:
+	var sf = StyleBoxFlat.new()
+	if activo:
+		sf.bg_color               = col_bg
+		sf.border_color           = col_borde
+		sf.border_width_bottom    = 4
+		sf.border_width_left      = 0; sf.border_width_right = 0; sf.border_width_top = 0
+	else:
+		sf.bg_color               = Color(0.97, 0.97, 1.00)
+		sf.border_color           = Color(0.70, 0.74, 0.84)
+		sf.border_width_bottom    = 3
+		sf.border_width_left      = 0; sf.border_width_right = 0; sf.border_width_top = 0
+	sf.set_corner_radius_all(16)
+	sf.content_margin_left    = 16; sf.content_margin_right  = 16
+	sf.content_margin_top     = 4;  sf.content_margin_bottom = 8
+	c.add_theme_stylebox_override("panel", sf)
+	if c.get_child_count() > 0:
+		var cc = c.get_child(0)
+		if is_instance_valid(cc) and cc.get_child_count() > 0:
+			var lbl = cc.get_child(0) as Label
+			if lbl:
+				var col_txt = Color.WHITE if activo else Color(0.25, 0.30, 0.42)
+				lbl.add_theme_color_override("font_color", col_txt)
+
 func _crear_input(placeholder: String, es_password: bool) -> LineEdit:
 	var inp = LineEdit.new()
 	inp.placeholder_text    = placeholder
@@ -737,39 +922,41 @@ func _crear_input(placeholder: String, es_password: bool) -> LineEdit:
 	inp.custom_minimum_size = Vector2(400, 48)
 	inp.alignment           = HORIZONTAL_ALIGNMENT_CENTER
 	inp.add_theme_font_size_override("font_size", 20)
-	if _font:
-		inp.add_theme_font_override("font", _font)
+	# El proyecto tiene Kenney Future como fuente global (all-caps).
+	# Forzamos SystemFont en los inputs para que el profesor distinga mayúsculas de minúsculas.
+	var sys_font = SystemFont.new()
+	sys_font.font_names = PackedStringArray(["Segoe UI", "Arial", "Helvetica Neue", "DejaVu Sans"])
+	inp.add_theme_font_override("font", sys_font)
 	inp.add_theme_color_override("font_color", NAVY)
 	inp.add_theme_color_override("font_placeholder_color", Color(0.45, 0.52, 0.62))
+
+	inp.caret_blink          = true
+	inp.caret_blink_interval = 0.6
+	inp.add_theme_color_override("caret_color", NAVY)
 
 	var st = StyleBoxFlat.new()
 	st.bg_color = Color.WHITE
 	st.border_color = Color(0.70, 0.50, 0.28)
-	st.set_border_width_all(3)
+	st.set_border_width_all(2)
+	st.border_width_bottom = 4
 	st.set_corner_radius_all(14)
 	st.content_margin_left  = 16
 	st.content_margin_right = 16
 	inp.add_theme_stylebox_override("normal", st)
-	inp.add_theme_stylebox_override("focus", st)
+
+	var st_focus = StyleBoxFlat.new()
+	st_focus.bg_color = Color.WHITE
+	st_focus.border_color = TURQUESA
+	st_focus.set_border_width_all(3)
+	st_focus.border_width_bottom = 5
+	st_focus.set_corner_radius_all(14)
+	st_focus.content_margin_left  = 16
+	st_focus.content_margin_right = 16
+	inp.add_theme_stylebox_override("focus", st_focus)
 	return inp
 
-func _crear_btn_x() -> Button:
-	var btn = Button.new()
-	btn.custom_minimum_size = Vector2(63, 63)
-	var empty = StyleBoxEmpty.new()
-	for state in ["normal", "hover", "pressed", "focus", "disabled"]:
-		btn.add_theme_stylebox_override(state, empty)
-	var ir = TextureRect.new()
-	ir.texture = load(ICO_X) as Texture2D
-	ir.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-	ir.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
-	ir.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	ir.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	btn.add_child(ir)
-	return btn
-
 # ---------------------------------------------------------------------------
-# Modal de alerta amigable (con panel.svg y boton.svg)
+# Modal de alerta amigable
 # ---------------------------------------------------------------------------
 
 func _construir_modal_alerta():
@@ -805,9 +992,7 @@ func _construir_modal_alerta():
 
 	_lbl_alerta_mensaje = _crear_label(
 		"Por favor, verifique las conexiones o contacte al administrador.",
-		18,
-		NAVY,
-		false
+		18, NAVY, false
 	)
 	_lbl_alerta_mensaje.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_lbl_alerta_mensaje.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
@@ -828,10 +1013,11 @@ func _mostrar_alerta_amigable(titulo: String, mensaje: String):
 	if is_instance_valid(_lbl_alerta_mensaje):
 		_lbl_alerta_mensaje.text = mensaje
 	if is_instance_valid(_modal_alerta):
+		_modal_alerta.move_to_front()
 		_modal_alerta.visible = true
 
 # ---------------------------------------------------------------------------
-# Animaciones y Helpers NinePatch idénticos a menu_principal.gd / menu_actividades.gd
+# Animación de click
 # ---------------------------------------------------------------------------
 
 func _animar_click(card: PanelContainer, callback: Callable):
@@ -847,91 +1033,3 @@ func _animar_click(card: PanelContainer, callback: Callable):
 	tw.tween_property(card, "scale", Vector2(0.92, 0.92), 0.08).set_trans(Tween.TRANS_QUART)
 	tw.tween_property(card, "scale", Vector2(1.0, 1.0),   0.18).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
 	tw.tween_callback(callback)
-
-func _iniciar_wobble(node: Control) -> void:
-	var idx := _wobble_index
-	_wobble_index += 1
-	var phase: float = idx * 0.41
-	var speed: float = 0.75 + idx * 0.105
-	var angle: float = 0.24
-	await get_tree().process_frame
-	if not is_instance_valid(node): return
-	node.pivot_offset = node.size / 2.0
-	var tw = create_tween().set_loops()
-	if phase > 0.0: tw.tween_interval(phase)
-	tw.tween_property(node, "rotation_degrees",  angle, speed).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
-	tw.tween_property(node, "rotation_degrees", -angle, speed).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
-	_wobble_data.append({"node": node, "tween": tw, "type": "wobble", "phase": phase, "speed": speed, "angle": angle})
-	if has_node("/root/AnimManager") and not AnimManager.activas:
-		tw.pause(); node.rotation_degrees = 0.0
-
-func _iniciar_jiggle(node: Control) -> void:
-	node.pivot_offset = Vector2(node.custom_minimum_size.x / 2.0, node.custom_minimum_size.y)
-	var tw = create_tween().set_loops()
-	tw.tween_property(node, "rotation_degrees",  5.0, 0.14).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
-	tw.tween_property(node, "rotation_degrees", -5.0, 0.16).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
-	tw.tween_property(node, "rotation_degrees",  2.5, 0.10).set_trans(Tween.TRANS_SINE)
-	tw.tween_property(node, "rotation_degrees",  0.0, 0.12).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN)
-	tw.tween_interval(2.5)
-	_wobble_data.append({"node": node, "tween": tw, "type": "jiggle", "phase": 0.0, "speed": 0.0, "angle": 0.0})
-	if has_node("/root/AnimManager") and not AnimManager.activas:
-		tw.pause(); node.rotation_degrees = 0.0
-
-func _on_anim_changed(activo: bool):
-	if activo:
-		_recrear_wobbles()
-	else:
-		for d in _wobble_data:
-			if is_instance_valid(d["tween"]): d["tween"].pause()
-			if is_instance_valid(d["node"]): d["node"].rotation_degrees = 0.0
-
-func _recrear_wobbles():
-	for d in _wobble_data:
-		if not is_instance_valid(d["node"]): continue
-		if is_instance_valid(d["tween"]): d["tween"].kill()
-		var node: Control = d["node"]
-		node.rotation_degrees = 0.0
-		var tw = create_tween().set_loops()
-		d["tween"] = tw
-		if d["type"] == "wobble":
-			var phase: float = d["phase"]
-			if phase > 0.0: tw.tween_interval(phase)
-			tw.tween_property(node, "rotation_degrees",  d["angle"], d["speed"]).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
-			tw.tween_property(node, "rotation_degrees", -d["angle"], d["speed"]).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
-		elif d["type"] == "jiggle":
-			node.pivot_offset = Vector2(node.custom_minimum_size.x / 2.0, node.custom_minimum_size.y)
-			tw.tween_property(node, "rotation_degrees",  5.0, 0.14).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
-			tw.tween_property(node, "rotation_degrees", -5.0, 0.16).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
-			tw.tween_property(node, "rotation_degrees",  2.5, 0.10).set_trans(Tween.TRANS_SINE)
-			tw.tween_property(node, "rotation_degrees",  0.0, 0.12).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN)
-			tw.tween_interval(2.5)
-
-func _aplicar_margenes_panel(s: StyleBoxTexture, tex: Texture2D):
-	var m: int = max(4, int(tex.get_width() * 0.156))
-	s.texture_margin_left   = m; s.texture_margin_right  = m
-	s.texture_margin_top    = m; s.texture_margin_bottom = m
-	var cm: int = m + 16
-	s.content_margin_left   = cm; s.content_margin_right  = cm
-	s.content_margin_top    = cm; s.content_margin_bottom = cm
-
-func _aplicar_margenes_boton(s: StyleBoxTexture, tex: Texture2D):
-	var m: int = max(6, int(tex.get_width() * 0.25))
-	s.texture_margin_left   = m; s.texture_margin_right  = m
-	s.texture_margin_top    = m; s.texture_margin_bottom = m
-	s.content_margin_left   = 14; s.content_margin_right  = 14
-	s.content_margin_top    = 10; s.content_margin_bottom = 10
-
-func _aplicar_margenes_banner(np: NinePatchRect, tex: Texture2D):
-	var w: int = tex.get_width(); var h: int = tex.get_height()
-	np.patch_margin_left   = max(4, int(w * 0.047))
-	np.patch_margin_right  = max(4, int(w * 0.047))
-	np.patch_margin_top    = max(4, int(h * 0.203))
-	np.patch_margin_bottom = max(4, int(h * 0.203))
-
-func _crear_label(texto: String, tam: int, color: Color, _negrita: bool) -> Label:
-	var lbl = Label.new()
-	lbl.text = texto
-	lbl.add_theme_font_size_override("font_size", tam)
-	lbl.add_theme_color_override("font_color", color)
-	if _font: lbl.add_theme_font_override("font", _font)
-	return lbl

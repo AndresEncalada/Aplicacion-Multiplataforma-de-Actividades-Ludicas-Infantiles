@@ -38,6 +38,9 @@ frontend/felpudo/.godot/
 # Archivos temporales del editor (autosave de crash)
 frontend/felpudo/*.tmp
 
+# UIDs de recursos (regenerados automáticamente por el editor)
+*.uid
+
 # Exportación Android
 frontend/felpudo/android/
 
